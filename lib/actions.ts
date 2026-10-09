@@ -107,13 +107,17 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
   if (!email || email !== db.settings.email.toLowerCase()) {
     return { ok: false, error: "Those details don't match the owner account." };
   }
+  // ADMIN_PASSWORD always works when set; otherwise use the Supabase Auth user for this email.
+  const envPassword = devAdminPassword();
   const anon = supabaseAnon();
-  if (usingSupabase() && anon) {
+  if (envPassword && safeEqual(password, envPassword)) {
+    // Signed in with the admin password.
+  } else if (usingSupabase() && anon) {
     const { data, error } = await anon.auth.signInWithPassword({ email, password });
     if (error || data.user?.email?.toLowerCase() !== email) {
       return { ok: false, error: "Those details don't match the owner account." };
     }
-  } else if (!devAdminPassword() || !safeEqual(password, devAdminPassword())) {
+  } else {
     return { ok: false, error: "Those details don't match the owner account." };
   }
   await setSession(email);

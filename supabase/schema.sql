@@ -11,7 +11,12 @@ insert into public.admin_users (email)
 values ('regmisushant94@gmail.com')
 on conflict (email) do nothing;
 
-create or replace function public.is_admin()
+-- The admin check lives in a private schema so it isn't callable through the public API.
+create schema if not exists private;
+grant usage on schema private to anon, authenticated;
+drop function if exists public.is_admin() cascade;
+
+create or replace function private.is_admin()
 returns boolean
 language sql
 stable
@@ -227,68 +232,68 @@ alter table public.media enable row level security;
 drop policy if exists "public read settings" on public.site_settings;
 create policy "public read settings" on public.site_settings for select using (true);
 drop policy if exists "admin write settings" on public.site_settings;
-create policy "admin write settings" on public.site_settings for all using (public.is_admin()) with check (public.is_admin());
+create policy "admin write settings" on public.site_settings for all using (private.is_admin()) with check (private.is_admin());
 
 drop policy if exists "public read visible services" on public.services;
-create policy "public read visible services" on public.services for select using (visible = true or public.is_admin());
+create policy "public read visible services" on public.services for select using (visible = true or private.is_admin());
 drop policy if exists "admin write services" on public.services;
-create policy "admin write services" on public.services for all using (public.is_admin()) with check (public.is_admin());
+create policy "admin write services" on public.services for all using (private.is_admin()) with check (private.is_admin());
 
 drop policy if exists "public read active offers" on public.offers;
-create policy "public read active offers" on public.offers for select using (active = true or public.is_admin());
+create policy "public read active offers" on public.offers for select using (active = true or private.is_admin());
 drop policy if exists "admin write offers" on public.offers;
-create policy "admin write offers" on public.offers for all using (public.is_admin()) with check (public.is_admin());
+create policy "admin write offers" on public.offers for all using (private.is_admin()) with check (private.is_admin());
 
 drop policy if exists "admin promo codes" on public.promo_codes;
-create policy "admin promo codes" on public.promo_codes for all using (public.is_admin()) with check (public.is_admin());
+create policy "admin promo codes" on public.promo_codes for all using (private.is_admin()) with check (private.is_admin());
 
 drop policy if exists "admin read leads" on public.leads;
-create policy "admin read leads" on public.leads for select using (public.is_admin());
+create policy "admin read leads" on public.leads for select using (private.is_admin());
 drop policy if exists "admin update leads" on public.leads;
-create policy "admin update leads" on public.leads for update using (public.is_admin()) with check (public.is_admin());
+create policy "admin update leads" on public.leads for update using (private.is_admin()) with check (private.is_admin());
 drop policy if exists "admin delete leads" on public.leads;
-create policy "admin delete leads" on public.leads for delete using (public.is_admin());
+create policy "admin delete leads" on public.leads for delete using (private.is_admin());
 drop policy if exists "public insert leads" on public.leads;
 create policy "public insert leads" on public.leads for insert with check (char_length(name) between 2 and 80);
 
 drop policy if exists "admin bookings" on public.bookings;
-create policy "admin bookings" on public.bookings for all using (public.is_admin()) with check (public.is_admin());
+create policy "admin bookings" on public.bookings for all using (private.is_admin()) with check (private.is_admin());
 drop policy if exists "public insert bookings" on public.bookings;
 create policy "public insert bookings" on public.bookings for insert with check (char_length(name) between 2 and 80 and char_length(address) between 5 and 160);
 
 drop policy if exists "public read results" on public.before_after;
 create policy "public read results" on public.before_after for select using (true);
 drop policy if exists "admin write results" on public.before_after;
-create policy "admin write results" on public.before_after for all using (public.is_admin()) with check (public.is_admin());
+create policy "admin write results" on public.before_after for all using (private.is_admin()) with check (private.is_admin());
 
 drop policy if exists "public read visible reviews" on public.reviews;
-create policy "public read visible reviews" on public.reviews for select using (status = 'approved' or public.is_admin());
+create policy "public read visible reviews" on public.reviews for select using (status = 'approved' or private.is_admin());
 drop policy if exists "admin write reviews" on public.reviews;
-create policy "admin write reviews" on public.reviews for all using (public.is_admin()) with check (public.is_admin());
+create policy "admin write reviews" on public.reviews for all using (private.is_admin()) with check (private.is_admin());
 
 drop policy if exists "public read faqs" on public.faqs;
 create policy "public read faqs" on public.faqs for select using (true);
 drop policy if exists "admin write faqs" on public.faqs;
-create policy "admin write faqs" on public.faqs for all using (public.is_admin()) with check (public.is_admin());
+create policy "admin write faqs" on public.faqs for all using (private.is_admin()) with check (private.is_admin());
 
 drop policy if exists "public read blocked dates" on public.blocked_dates;
 create policy "public read blocked dates" on public.blocked_dates for select using (true);
 drop policy if exists "admin write blocked dates" on public.blocked_dates;
-create policy "admin write blocked dates" on public.blocked_dates for all using (public.is_admin()) with check (public.is_admin());
+create policy "admin write blocked dates" on public.blocked_dates for all using (private.is_admin()) with check (private.is_admin());
 
 drop policy if exists "public read media" on public.media;
 create policy "public read media" on public.media for select using (true);
 drop policy if exists "admin write media" on public.media;
-create policy "admin write media" on public.media for all using (public.is_admin()) with check (public.is_admin());
+create policy "admin write media" on public.media for all using (private.is_admin()) with check (private.is_admin());
 
 drop policy if exists "admin users" on public.admin_users;
-create policy "admin users" on public.admin_users for all using (public.is_admin()) with check (public.is_admin());
+create policy "admin users" on public.admin_users for all using (private.is_admin()) with check (private.is_admin());
 
 insert into storage.buckets (id, name, public)
 values ('media', 'media', true)
 on conflict (id) do nothing;
 
+-- Files in the public bucket are served by URL; no select policy, so nobody can list the bucket.
 drop policy if exists "public read media files" on storage.objects;
-create policy "public read media files" on storage.objects for select using (bucket_id = 'media');
 drop policy if exists "admin write media files" on storage.objects;
-create policy "admin write media files" on storage.objects for all using (bucket_id = 'media' and public.is_admin()) with check (bucket_id = 'media' and public.is_admin());
+create policy "admin write media files" on storage.objects for all using (bucket_id = 'media' and private.is_admin()) with check (bucket_id = 'media' and private.is_admin());
