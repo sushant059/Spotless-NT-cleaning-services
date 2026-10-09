@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PageHero, Steps } from "@/components/content";
+import { CtaBand, PageHero, SectionHeading, Steps } from "@/components/content";
+import { getDb } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "How it works",
@@ -8,44 +9,54 @@ export const metadata: Metadata = {
 };
 
 const DRYING = [
-  ["Carpet", "Usually 4–8 hours to walk on. Longer in the wet season or in closed rooms."],
-  ["Rugs", "Often 6–12 hours. Thick wool needs airflow underneath."],
-  ["Upholstery", "Many pieces are usable the same day. Thick cushions take longer."],
-  ["Mattresses", "A few hours is typical. Sleep on it once it feels dry."],
+  ["Carpet", "4–8 hours", "Longer in the wet season or in closed rooms."],
+  ["Rugs", "6–12 hours", "Thick wool needs airflow underneath."],
+  ["Upholstery", "Same day", "Thick cushions can take a little longer."],
+  ["Mattresses", "A few hours", "Sleep on it once it feels dry to touch."],
 ];
 
-export default function HowItWorksPage() {
+export default async function HowItWorksPage() {
+  const db = await getDb();
   return (
     <>
-      <PageHero eyebrow="How it works" title="Three steps, then a dry floor" lede="No mystery package. You ask, we price it, we clean, and we tell you when the room is ready to use." />
-      <section className="bg-cream px-4 py-12">
-        <div className="mx-auto max-w-6xl"><Steps /></div>
+      <PageHero eyebrow="How it works" title="Simple to book. Careful on the day." lede="No mystery packages. You ask, we price it, we clean, and we tell you when the room is ready to use." crumbs={[{ href: "/how-it-works", label: "How it works" }]} />
+      <section className="section pt-12">
+        <div className="container-x"><Steps /></div>
       </section>
-      <section className="bg-white px-4 py-12">
-        <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-2">
+      <section className="section bg-mist">
+        <div className="container-x grid gap-10 lg:grid-cols-2">
           <div>
-            <h2 className="text-[28px] font-bold md:text-[36px]">On the day</h2>
-            <ol className="mt-4 space-y-4 text-slate">
-              <li><strong className="text-ink">1. Access.</strong> We need a park, a working tap and the rooms cleared of small items where we can.</li>
-              <li><strong className="text-ink">2. Inspect.</strong> Fibre, stains, loose dye and anything that should not get wet.</li>
-              <li><strong className="text-ink">3. Pre-treat and extract.</strong> Soil goes into the tank, not back into the pile.</li>
-              <li><strong className="text-ink">4. Groom and explain.</strong> We set the pile and tell you the drying time for that weather.</li>
+            <SectionHeading eyebrow="On the day" title="What happens when we arrive" />
+            <ol className="mt-8 space-y-5">
+              {[
+                ["Access", "A park close by, a working tap and small items cleared from the floor where you can."],
+                ["Inspect", "We check the fibre, stains, loose dye and anything that shouldn’t get wet."],
+                ["Pre-treat & extract", "Soil goes into our tank, not back into the pile."],
+                ["Groom & explain", "We set the pile and give you a drying time for that day’s weather."],
+              ].map(([title, text], index) => (
+                <li key={title} className="flex gap-4">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand font-display font-bold text-white">{index + 1}</span>
+                  <div><h3 className="font-display text-lg font-bold text-navy">{title}</h3><p className="text-slate">{text}</p></div>
+                </li>
+              ))}
             </ol>
           </div>
           <div>
-            <h2 className="text-[28px] font-bold">Drying times</h2>
-            <table className="mt-4 w-full text-left">
-              <caption className="sr-only">Typical drying times</caption>
-              <tbody>
-                {DRYING.map(([item, time]) => (
-                  <tr key={item} className="border-b border-[#d7ebee]"><th className="py-3 pr-4 align-top">{item}</th><td className="py-3 text-slate">{time}</td></tr>
-                ))}
-              </tbody>
-            </table>
-            <Link href="/booking" className="mt-6 inline-flex min-h-[52px] items-center rounded-full bg-sun px-6 font-semibold text-ink">Request a time</Link>
+            <SectionHeading eyebrow="Drying times" title="Typical drying in Darwin" />
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              {DRYING.map(([item, time, note]) => (
+                <div key={item} className="card p-5">
+                  <p className="text-sm font-semibold text-slate">{item}</p>
+                  <p className="mt-1 font-display text-2xl font-extrabold text-navy">{time}</p>
+                  <p className="mt-1 text-sm text-slate">{note}</p>
+                </div>
+              ))}
+            </div>
+            <Link href="/booking" className="mt-8 inline-flex min-h-12 items-center rounded-full bg-leaf-dark px-6 font-bold text-white hover:bg-[#1d6a19]">Request a time</Link>
           </div>
         </div>
       </section>
+      <CtaBand settings={db.settings} />
     </>
   );
 }

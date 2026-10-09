@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PageHero } from "@/components/content";
+import { CtaBand, PageHero } from "@/components/content";
 import { FaqBrowser } from "@/components/faq-browser";
 import { getDb } from "@/lib/store";
 import { byOrder } from "@/lib/utils";
@@ -19,11 +19,12 @@ export default async function FaqsPage() {
   };
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <PageHero eyebrow="FAQs" title="Good questions" lede="Short answers we are happy to repeat on the phone. If your job is unusual, ask — the form is there for that." />
-      <section className="bg-cream px-4 py-12">
-        <div className="mx-auto max-w-3xl"><FaqBrowser faqs={faqs} /></div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      <PageHero eyebrow="FAQs" title="Good questions, straight answers." lede="Search or browse by topic. If your job is unusual, just ask. That’s what the chat is for." crumbs={[{ href: "/faqs", label: "FAQs" }]} />
+      <section className="section pt-12">
+        <div className="container-x max-w-3xl"><FaqBrowser faqs={faqs} /></div>
       </section>
+      <CtaBand settings={db.settings} />
     </>
   );
 }

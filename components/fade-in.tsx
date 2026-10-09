@@ -1,19 +1,40 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { cn } from "@/lib/utils";
 
-export function FadeIn({ children, className }: { children: React.ReactNode; className?: string }) {
-  const reduce = useReducedMotion();
-  if (reduce) return <div className={className}>{children}</div>;
+/** Wraps content that fades up when scrolled into view. Visible by default without JS. */
+export function FadeIn({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-40px" }}
-      transition={{ duration: 0.45, ease: "easeOut" }}
-    >
+    <div data-reveal className={cn("min-w-0", className)} style={delay ? { transitionDelay: `${delay}ms` } : undefined}>
       {children}
-    </motion.div>
+    </div>
   );
+}
+
+/** One observer for the whole page, re-run after each client navigation. */
+export function RevealObserver() {
+  const pathname = usePathname();
+  useEffect(() => {
+    const items = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]:not(.is-visible)"));
+    if (!("IntersectionObserver" in window)) {
+      items.forEach((item) => item.classList.add("is-visible"));
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      { rootMargin: "0px 0px -8% 0px" },
+    );
+    items.forEach((item) => observer.observe(item));
+    return () => observer.disconnect();
+  }, [pathname]);
+  return null;
 }

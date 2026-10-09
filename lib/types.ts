@@ -1,6 +1,8 @@
 export type LeadStatus = "new" | "contacted" | "quoted" | "booked" | "completed" | "lost";
 export type LeadSource = "quote" | "chat" | "contact";
 export type IconName = "layers" | "sofa" | "bed" | "rug" | "armchair" | "paw" | "siren" | "key" | "building";
+export type ServiceCategory = "carpet-and-rugs" | "upholstery-and-bedding" | "bond-and-property" | "specialty-and-urgent";
+export type ReviewStatus = "pending" | "approved" | "rejected";
 
 export type ServiceProcess = { title: string; detail: string };
 export type ServiceFaq = { question: string; answer: string };
@@ -16,8 +18,12 @@ export type Service = {
   process: ServiceProcess[];
   faqs: ServiceFaq[];
   icon: IconName;
+  category: ServiceCategory;
+  priceFrom: string;
+  duration: string;
   image: string;
   videoUrl: string;
+  gallery: string[];
   order: number;
   visible: boolean;
   related: string[];
@@ -40,6 +46,7 @@ export type Settings = {
   instagram: string;
   tiktok: string;
   google: string;
+  youtube: string;
   abn: string;
   licence: string;
   insurance: string;
@@ -142,8 +149,10 @@ export type Review = {
   service: string;
   rating: number;
   date: string;
-  source: "sample" | "manual" | "google";
-  visible: boolean;
+  source: "sample" | "manual" | "google" | "customer";
+  status: ReviewStatus;
+  email: string;
+  suburb: string;
   order: number;
 };
 

@@ -6,13 +6,13 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clearSession, devAdminPassword, getSession, setSession } from "@/lib/auth";
 import { getBotReply } from "@/lib/bot";
-import { summariseJob, timeWindowLabel, validateDetails } from "@/lib/constants";
+import { SERVICE_CATEGORY_IDS, summariseJob, timeWindowLabel, validateDetails } from "@/lib/constants";
 import { customerEmail, ownerLeadEmail, sendMail } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
 import { seedDatabase } from "@/lib/seed";
 import { getDb, storeMediaFile, supabaseAnon, updateDb, usingSupabase } from "@/lib/store";
 import type { ActionResult, Booking, DetailValue, Faq, Lead, Offer, Promo, ResultPair, Review, Service, Settings } from "@/lib/types";
-import { byOrder, slugify, uid, uniqueReference } from "@/lib/utils";
+import { byOrder, escapeHtml, slugify, uid, uniqueReference } from "@/lib/utils";
 import {
   bookingSchema,
   chatSchema,
@@ -21,6 +21,7 @@ import {
   isPastDate,
   normalizeAuPhone,
   quoteSchema,
+  reviewSchema,
 } from "@/lib/validators";
 
 function safeEqual(a: string, b: string) {
@@ -388,6 +389,7 @@ const settingsSchema = z.object({
   instagram: optionalUrl,
   tiktok: optionalUrl,
   google: optionalUrl,
+  youtube: optionalUrl,
   abn: z.string().trim().max(20),
   licence: z.string().trim().max(80),
   insurance: z.string().trim().max(120),
@@ -419,6 +421,8 @@ export async function saveServiceAction(service: Service): Promise<ActionResult>
   const auth = await guard();
   if (!auth.ok) return auth;
   if (!service.title.trim() || !service.slug.trim()) return { ok: false, error: "A service needs a title." };
+  if (!SERVICE_CATEGORY_IDS.includes(service.category)) return { ok: false, error: "Choose a category." };
+  service = { ...service, gallery: service.gallery.map((url) => url.trim()).filter(Boolean).slice(0, 24) };
   await updateDb((db) => {
     const index = db.services.findIndex((item) => item.id === service.id);
     if (index >= 0) db.services[index] = service;
@@ -594,6 +598,50 @@ export async function saveReviewAction(review: Review): Promise<ActionResult> {
   return { ok: true, message: "Review saved." };
 }
 
+export async function moderateReviewAction(id: string, status: Review["status"]): Promise<ActionResult> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  if (!["pending", "approved", "rejected"].includes(status)) return { ok: false, error: "Unknown status." };
+  await updateDb((db) => {
+    const review = db.reviews.find((item) => item.id === id);
+    if (review) review.status = status;
+  });
+  refresh();
+  return { ok: true, message: status === "approved" ? "Review approved. It is now on the website." : status === "rejected" ? "Review rejected. It stays hidden." : "Moved back to pending." };
+}
+
+export async function submitReviewAction(input: unknown): Promise<ActionResult> {
+  const block = limited(await clientKey("review"), 3, 30 * 60 * 1000);
+  if (block) return block;
+  const parsed = reviewSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Please check your review.", fields: fieldsOf(parsed.error) };
+  if (honeypot(parsed.data.company_website)) return { ok: true };
+  const db = await getDb();
+  await updateDb((next) => {
+    next.reviews.push({
+      id: uid("rev"),
+      name: parsed.data.name,
+      text: parsed.data.text,
+      service: parsed.data.service,
+      rating: parsed.data.rating,
+      date: new Date().toISOString().slice(0, 10),
+      source: "customer",
+      status: "pending",
+      email: parsed.data.email,
+      suburb: parsed.data.suburb,
+      order: next.reviews.length + 1,
+    });
+  });
+  await sendMail([{
+    to: db.settings.notificationEmail || db.settings.email,
+    subject: `New ${parsed.data.rating}-star review waiting for approval — ${parsed.data.name}`,
+    html: `<p><strong>${escapeHtml(parsed.data.name)}</strong> left a ${parsed.data.rating}-star review${parsed.data.service ? ` for ${escapeHtml(parsed.data.service)}` : ""}.</p><blockquote>${escapeHtml(parsed.data.text)}</blockquote><p>Open the admin panel, Reviews, to approve or reject it.</p>`,
+    text: `${parsed.data.name} left a ${parsed.data.rating}-star review: ${parsed.data.text}\nOpen the admin panel to approve or reject it.`,
+  }]);
+  refresh();
+  return { ok: true, message: "Your review has been sent to our team and will appear on the website once it is approved." };
+}
+
 export async function deleteReviewAction(id: string): Promise<ActionResult> {
   const auth = await guard();
   if (!auth.ok) return auth;
@@ -655,6 +703,10 @@ function assignSlot(db: { settings: Settings; services: Service[]; media: { slot
   if (slot.startsWith("service-image:")) {
     const service = db.services.find((item) => item.slug === slot.slice("service-image:".length));
     if (service) service.image = url;
+  }
+  if (slot.startsWith("service-gallery:")) {
+    const service = db.services.find((item) => item.slug === slot.slice("service-gallery:".length));
+    if (service && !service.gallery.includes(url)) service.gallery.push(url);
   }
 }
 
@@ -721,8 +773,12 @@ export async function createServiceAction(title: string): Promise<ActionResult> 
       process: [{ title: "Quote", detail: "We confirm the price before we begin." }],
       faqs: [],
       icon: "layers",
+      category: "specialty-and-urgent",
+      priceFrom: "",
+      duration: "",
       image: "",
       videoUrl: "",
+      gallery: [],
       order: db.services.length + 1,
       visible: false,
       related: [],

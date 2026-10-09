@@ -1,12 +1,31 @@
 # Spotless NT Cleaning Services
 
-Mobile-first website and owner admin for Spotless NT, a carpet, couch, mattress and general cleaning business in Darwin and the surrounding Northern Territory.
+Website and owner admin panel for Spotless NT, a carpet, upholstery, mattress and bond cleaning business in Darwin and the surrounding Northern Territory.
 
-The picture mark is the supplied logo. The wordmark reads **Spotless NT Cleaning Services**. The generated file originally said “anti-cleaning”; that line is corrected here so it is not published.
+## What's included
+
+**Public website**
+- New brand system built from the logo colours (see [`docs/BRAND.md`](docs/BRAND.md)).
+- Services grouped into four categories: Carpet & Rugs, Upholstery & Bedding, Bond & Property, and Specialty & Urgent. There's a mega-menu on desktop and accordions on mobile.
+- Each service page has a video (YouTube, TikTok, Vimeo or an uploaded MP4), a photo gallery with lightbox, before/after sliders, the process, FAQs, reviews and a sticky booking card.
+- An animated preview stands in wherever a real video hasn't been added yet.
+- Offers page and top banner, promo codes.
+- Reviews: customers submit a review on the site → it waits in admin → it's published only after approval. After submitting, customers are offered a "Post on Google" button.
+- Social icons for Facebook, Instagram, TikTok, WhatsApp and Google (plus YouTube when set). Until a profile link is added in Settings, each icon opens that network's home page.
+- A conversational booking assistant. It asks for the service, then service-specific questions (e.g. bedrooms and bathrooms for a bond clean, number of rugs for rug cleaning), then suburb, name, mobile, timing and promo code. It confirms, saves the lead and says the team will be in touch. It also answers common questions (drying, pets, stains…).
+- Free quote form with photo upload, booking request form, contact page, FAQ search, suburb checker.
+
+**Admin (`/admin`)**
+- Dashboard with new enquiries, reviews waiting, pipeline and a "make the site shine" checklist.
+- Leads & bookings (status, notes, call/WhatsApp, CSV export, blocked dates).
+- Reviews: Pending / Approved / Rejected tabs with one-click approve.
+- Services: category, price, time on site, text, video link or upload, cover photo and gallery uploads.
+- Before & after pairs, media library, offers and promo codes, FAQs.
+- Settings: business name, phone, email, WhatsApp, social links, Google review link, hero text, service areas, opening hours, ABN/licence/insurance, SEO.
 
 ## Stack
 
-- Next.js App Router, TypeScript, Tailwind CSS, shadcn-style UI (Radix, CVA), lucide icons, Framer Motion
+- Next.js App Router, TypeScript, Tailwind CSS, shadcn-style UI (Radix, CVA), lucide icons
 - Zod and React Hook Form
 - Local JSON database for development, Supabase Postgres when configured
 - Resend for email when configured
@@ -24,7 +43,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Development sign-in, only when `NODE_ENV` is not production:
 
-- Email: `regmisusanth94@gmail.com`
+- Email: `regmisushant94@gmail.com`
 - Password: `ADMIN_PASSWORD` from `.env.local`, or `spotless-demo` if that variable is empty
 
 Set a long `AUTH_SECRET` and a real `ADMIN_PASSWORD` before any public deploy. The development password is not accepted as a fallback in production.
@@ -48,8 +67,8 @@ If Supabase or Resend is not configured, quotes, bookings, chat and contact mess
 
 ## Supabase
 
-1. Create a project and run `supabase/schema.sql` in the SQL editor.
-2. In Authentication, create a user for `regmisusanth94@gmail.com`.
+1. Create a project and run `supabase/schema.sql` in the SQL editor. It is safe to run again after an update. It adds new columns and fixes the old misspelt owner email.
+2. In Authentication, create a user for `regmisushant94@gmail.com`.
 3. Put the three Supabase keys in `.env.local`.
 4. Restart the app. Empty tables are seeded on the first connection.
 5. Create a public Storage bucket named `media` if the SQL bucket insert did not run (the schema tries to create it).
@@ -57,6 +76,10 @@ If Supabase or Resend is not configured, quotes, bookings, chat and contact mess
 The service role key is used on the server. Row Level Security still protects direct access with the anon key. Promo codes are not publicly readable. Leads and bookings can be inserted with length checks, and only the owner can read them.
 
 Changing the public email in Settings also changes the only email allowed to sign in. The Supabase user has to match that address.
+
+## Uploads and video
+
+Server actions accept uploads up to 45MB locally. On Vercel, a single request is capped at about 4.5MB, so photos are compressed in the browser before upload. For longer videos, post them to YouTube or TikTok and paste the link into the service. The site embeds it.
 
 ## Email
 
@@ -82,6 +105,8 @@ npm start
 
 - Home, services, service detail, why us, how it works, results, reviews, FAQs, contact, privacy, terms and the 404 page at 360px, 768px and 1280px.
 - Sticky header, dismissible offer banner, mobile menu, bottom Call / WhatsApp / Free Quote bar, floating WhatsApp, chat and back to top.
+- A review sent from /reviews stays hidden until it is approved in Admin → Reviews, then appears on the site.
+- The chat assistant asks service-specific questions (try End of lease: bedrooms, bathrooms, property type) and the lead shows in Admin → Leads.
 - Free quote, booking (including a blocked date and a past date), contact and the chat callback. Each success state shows an `SNT-` reference.
 - Promo code `WELCOME10` shows the confirmation message. A fake code does not.
 - Suburb checker accepts Parap and explains an unknown suburb.
@@ -92,4 +117,4 @@ npm start
 
 ## Brand
 
-Territory Teal `#09808F`, Teal Deep `#066676`, Sun Yellow `#FFC531` with navy text, Ink `#17343C`, Sky Mist `#EAF8FA`, Cream `#FFFBF0`, Fresh Mint `#7ED9C6`, Soft Coral `#FF7A59` for urgent marks only. Poppins throughout. White text is not used on yellow, mint or coral.
+See [`docs/BRAND.md`](docs/BRAND.md) for colours, fonts, logo use, uniform and voice.

@@ -12,6 +12,7 @@ import {
   deletePromoAction,
   deleteResultAction,
   deleteReviewAction,
+  moderateReviewAction,
   reorderAction,
   resetLocalDataAction,
   saveFaqAction,
@@ -25,7 +26,10 @@ import {
 } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Input, Label, Textarea } from "@/components/ui/fields";
+import { Input, Label, Select, Textarea } from "@/components/ui/fields";
+import { ServiceIcon } from "@/components/icons";
+import { uploadFile } from "@/components/admin/upload";
+import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { useToast } from "@/components/ui/toaster";
 import type { Faq, MediaItem, Offer, Promo, ResultPair, Review, Service, Settings } from "@/lib/types";
 import { byOrder, uid } from "@/lib/utils";
@@ -108,7 +112,7 @@ export function OffersEditor({ offers, promos }: { offers: Offer[]; promos: Prom
             <Label htmlFor="promo-code">Code</Label>
             <Input id="promo-code" value={promo.code} onChange={(event) => setPromo({ ...promo, code: event.target.value.toUpperCase() })} />
             <Label htmlFor="promo-type">Type</Label>
-            <select id="promo-type" className="min-h-[52px] rounded-input border px-3" value={promo.type} onChange={(event) => setPromo({ ...promo, type: event.target.value as Promo["type"] })}>
+            <select id="promo-type" className="min-h-12 rounded-input border px-3" value={promo.type} onChange={(event) => setPromo({ ...promo, type: event.target.value as Promo["type"] })}>
               <option value="percent">Percent</option>
               <option value="fixed">Fixed amount</option>
             </select>
@@ -133,45 +137,125 @@ export function ServicesEditor({ services }: { services: Service[] }) {
   const { pending, run } = useSave();
   const [current, setCurrent] = useState<Service | null>(null);
   const [title, setTitle] = useState("");
+  const [uploading, setUploading] = useState("");
+  const toast = useToast();
+
+  async function upload(files: FileList | null, slot: string, apply: (url: string) => void) {
+    if (!files?.length) return;
+    setUploading(slot);
+    for (const file of Array.from(files)) {
+      const result = await uploadFile(file, slot);
+      if (result.ok && result.url) apply(result.url);
+      else toast(result.ok ? "Upload failed" : result.error, "error");
+    }
+    setUploading("");
+  }
+
   return (
-    <div className="space-y-4">
-      <form className="flex flex-col gap-2 sm:flex-row" onSubmit={(event) => { event.preventDefault(); run(async () => { const result = await createServiceAction(title); if (result.ok) setTitle(""); return result; }); }}>
-        <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="New service name" aria-label="New service name" />
-        <Button type="submit" size="sm">Add hidden service</Button>
+    <div className="space-y-6">
+      <form className="flex flex-col gap-2 rounded-card bg-white p-4 shadow-card sm:flex-row" onSubmit={(event) => { event.preventDefault(); run(async () => { const result = await createServiceAction(title); if (result.ok) setTitle(""); return result; }); }}>
+        <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="New service name, e.g. Tile & grout cleaning" aria-label="New service name" />
+        <Button type="submit" size="sm" className="shrink-0 whitespace-nowrap">Add service</Button>
       </form>
-      {byOrder(services).map((service) => (
-        <article key={service.id} className="rounded-card bg-white p-4 shadow-card">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-xl font-bold">{service.title}</h2>
-            <label className="text-sm font-semibold"><input type="checkbox" className="mr-2" checked={service.visible} onChange={(event) => run(() => saveServiceAction({ ...service, visible: event.target.checked }))} />Visible</label>
-          </div>
-          <p className="text-sm text-slate">/{service.slug}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => setCurrent(service)}>Edit</Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => run(() => reorderAction("services", service.id, -1))}>Up</Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => run(() => reorderAction("services", service.id, 1))}>Down</Button>
-          </div>
-        </article>
-      ))}
+      {SERVICE_CATEGORIES.map((category) => {
+        const list = byOrder(services).filter((service) => service.category === category.id);
+        if (!list.length) return null;
+        return (
+          <section key={category.id}>
+            <h2 className="mb-2 text-sm font-bold uppercase tracking-wider text-slate">{category.title}</h2>
+            <div className="grid gap-3 md:grid-cols-2">
+              {list.map((service) => (
+                <article key={service.id} className="flex gap-3 rounded-card bg-white p-4 shadow-card">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-light text-brand"><ServiceIcon name={service.icon} className="h-5 w-5" /></span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="font-bold text-navy">{service.title}</h3>
+                      <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={service.visible} onChange={(event) => run(() => saveServiceAction({ ...service, visible: event.target.checked }))} />{service.visible ? "Live" : "Hidden"}</label>
+                    </div>
+                    <p className="text-xs text-slate">{service.gallery.length} photos · {service.videoUrl ? "video ✓" : "no video yet"} · {service.priceFrom ? `from ${service.priceFrom}` : "no price shown"}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button type="button" size="sm" variant="outline" onClick={() => setCurrent(service)}>Edit</Button>
+                      <Button type="button" size="sm" variant="ghost" onClick={() => run(() => reorderAction("services", service.id, -1))}>↑</Button>
+                      <Button type="button" size="sm" variant="ghost" onClick={() => run(() => reorderAction("services", service.id, 1))}>↓</Button>
+                      <a className="inline-flex min-h-10 items-center px-2 text-sm font-semibold text-brand" href={`/services/${service.slug}`} target="_blank" rel="noopener noreferrer">View</a>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        );
+      })}
       {current && (
-        <form className="grid gap-3 rounded-card bg-white p-4 shadow-card" onSubmit={(event) => { event.preventDefault(); run(() => saveServiceAction(current)); }}>
-          <h2 className="text-xl font-bold">Edit {current.title}</h2>
-          <Label>Title</Label>
-          <Input value={current.title} onChange={(event) => setCurrent({ ...current, title: event.target.value })} />
-          <Label>Short summary</Label>
-          <Textarea value={current.summary} onChange={(event) => setCurrent({ ...current, summary: event.target.value })} />
-          <Label>Description</Label>
-          <Textarea value={current.description} onChange={(event) => setCurrent({ ...current, description: event.target.value })} />
-          <Label>Included, one per line</Label>
-          <Textarea value={current.included.join("\n")} onChange={(event) => setCurrent({ ...current, included: event.target.value.split("\n").map((line) => line.trim()).filter(Boolean) })} />
-          <Label>Best for, one per line</Label>
-          <Textarea value={current.bestFor.join("\n")} onChange={(event) => setCurrent({ ...current, bestFor: event.target.value.split("\n").map((line) => line.trim()).filter(Boolean) })} />
-          <Label>Image URL</Label>
-          <Input value={current.image} onChange={(event) => setCurrent({ ...current, image: event.target.value })} />
-          <Label>Video URL</Label>
-          <Input value={current.videoUrl} onChange={(event) => setCurrent({ ...current, videoUrl: event.target.value })} />
-          <Button type="submit" disabled={pending}>Save service</Button>
-        </form>
+        <div className="fixed inset-0 z-[70] overflow-y-auto bg-navy-deep/60 p-4" role="dialog" aria-modal="true" aria-label={`Edit ${current.title}`}>
+          <form className="mx-auto grid max-w-3xl gap-4 rounded-card bg-white p-5 shadow-soft md:p-8" onSubmit={(event) => { event.preventDefault(); run(async () => { const result = await saveServiceAction(current); if (result.ok) setCurrent(null); return result; }); }}>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-2xl font-bold text-navy">Edit {current.title}</h2>
+              <button type="button" className="rounded-full px-3 py-1 font-semibold text-slate hover:bg-mist" onClick={() => setCurrent(null)}>Close</button>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div><Label>Title</Label><Input value={current.title} onChange={(event) => setCurrent({ ...current, title: event.target.value })} /></div>
+              <div>
+                <Label>Category</Label>
+                <Select value={current.category} onChange={(event) => setCurrent({ ...current, category: event.target.value as Service["category"] })}>
+                  {SERVICE_CATEGORIES.map((category) => <option key={category.id} value={category.id}>{category.title}</option>)}
+                </Select>
+              </div>
+              <div><Label>Price shown (optional)</Label><Input value={current.priceFrom} placeholder="e.g. $89" onChange={(event) => setCurrent({ ...current, priceFrom: event.target.value })} /></div>
+              <div><Label>Time on site (optional)</Label><Input value={current.duration} placeholder="e.g. 1–2 hours" onChange={(event) => setCurrent({ ...current, duration: event.target.value })} /></div>
+            </div>
+            <div><Label>Short summary</Label><Textarea className="min-h-20" value={current.summary} onChange={(event) => setCurrent({ ...current, summary: event.target.value })} /></div>
+            <div><Label>Full description</Label><Textarea value={current.description} onChange={(event) => setCurrent({ ...current, description: event.target.value })} /></div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div><Label>What’s included (one per line)</Label><Textarea value={current.included.join("\n")} onChange={(event) => setCurrent({ ...current, included: event.target.value.split("\n").map((line) => line.trim()).filter(Boolean) })} /></div>
+              <div><Label>Perfect for (one per line)</Label><Textarea value={current.bestFor.join("\n")} onChange={(event) => setCurrent({ ...current, bestFor: event.target.value.split("\n").map((line) => line.trim()).filter(Boolean) })} /></div>
+            </div>
+
+            <fieldset className="rounded-2xl border border-line p-4">
+              <legend className="px-1 font-bold text-navy">Video</legend>
+              <p className="text-sm text-slate">Paste a YouTube, TikTok, Facebook or Instagram link, or upload a short MP4 (under 4MB works best). For longer clips, post to YouTube or TikTok and paste the link.</p>
+              <Input className="mt-3" value={current.videoUrl} placeholder="https://youtube.com/watch?v=…" onChange={(event) => setCurrent({ ...current, videoUrl: event.target.value })} />
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <label className="inline-flex min-h-10 cursor-pointer items-center rounded-full bg-brand-light px-4 text-sm font-semibold text-brand">
+                  {uploading === `service-video:${current.slug}` ? "Uploading…" : "Upload video"}
+                  <input type="file" accept="video/mp4,video/webm" className="sr-only" onChange={(event) => upload(event.target.files, `service-video:${current.slug}`, (url) => setCurrent((item) => (item ? { ...item, videoUrl: url } : item)))} />
+                </label>
+                {current.videoUrl && <button type="button" className="text-sm font-semibold text-danger" onClick={() => setCurrent({ ...current, videoUrl: "" })}>Remove video</button>}
+              </div>
+            </fieldset>
+
+            <fieldset className="rounded-2xl border border-line p-4">
+              <legend className="px-1 font-bold text-navy">Photos</legend>
+              <p className="text-sm text-slate">The cover photo shows on the service card and as the video poster. Gallery photos appear on the service page.</p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                {current.image && <MediaImage src={current.image} alt="" className="h-20 w-28 rounded-xl object-cover" />}
+                <label className="inline-flex min-h-10 cursor-pointer items-center rounded-full bg-brand-light px-4 text-sm font-semibold text-brand">
+                  {uploading === `service-image:${current.slug}` ? "Uploading…" : current.image ? "Replace cover photo" : "Upload cover photo"}
+                  <input type="file" accept="image/*" className="sr-only" onChange={(event) => upload(event.target.files, `service-image:${current.slug}`, (url) => setCurrent((item) => (item ? { ...item, image: url } : item)))} />
+                </label>
+              </div>
+              <ul className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5">
+                {current.gallery.map((url, index) => (
+                  <li key={url} className="group relative">
+                    <MediaImage src={url} alt="" className="aspect-square w-full rounded-xl object-cover" />
+                    <button type="button" className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-sm font-bold text-danger shadow" aria-label={`Remove photo ${index + 1}`} onClick={() => setCurrent({ ...current, gallery: current.gallery.filter((item) => item !== url) })}>×</button>
+                  </li>
+                ))}
+                <li>
+                  <label className="grid aspect-square cursor-pointer place-items-center rounded-xl border-2 border-dashed border-line text-center text-xs font-semibold text-brand hover:border-brand">
+                    {uploading === `service-gallery:${current.slug}` ? "Uploading…" : "+ Add photos"}
+                    <input type="file" accept="image/*" multiple className="sr-only" onChange={(event) => upload(event.target.files, `service-gallery:${current.slug}`, (url) => setCurrent((item) => (item ? { ...item, gallery: [...item.gallery, url] } : item)))} />
+                  </label>
+                </li>
+              </ul>
+            </fieldset>
+
+            <div className="sticky bottom-0 -mx-5 flex gap-3 border-t border-line bg-white px-5 pt-4 md:-mx-8 md:px-8">
+              <Button type="submit" disabled={pending || Boolean(uploading)}>{pending ? "Saving…" : "Save service"}</Button>
+              <Button type="button" variant="ghost" onClick={() => setCurrent(null)}>Cancel</Button>
+            </div>
+          </form>
+        </div>
       )}
     </div>
   );
@@ -200,7 +284,7 @@ export function ResultsEditor({ results, services }: { results: ResultPair[]; se
       <form className="grid gap-3 rounded-card bg-white p-4 shadow-card" onSubmit={(event) => { event.preventDefault(); run(() => saveResultAction(current)); }}>
         <h2 className="text-xl font-bold">Add or replace a pair</h2>
         <Label htmlFor="result-service">Service</Label>
-        <select id="result-service" className="min-h-[52px] rounded-input border px-3" value={current.serviceSlug} onChange={(event) => setCurrent({ ...current, serviceSlug: event.target.value, scene: event.target.value })}>
+        <select id="result-service" className="min-h-12 rounded-input border px-3" value={current.serviceSlug} onChange={(event) => setCurrent({ ...current, serviceSlug: event.target.value, scene: event.target.value })}>
           {services.map((service) => <option key={service.id} value={service.slug}>{service.title}</option>)}
         </select>
         <Label htmlFor="result-caption">Caption</Label>
@@ -243,14 +327,15 @@ export function MediaEditor({ media, services }: { media: MediaItem[]; services:
         <Label htmlFor="media-file">Upload</Label>
         <Input id="media-file" name="file" type="file" accept="image/*,video/mp4,video/webm" required />
         <Label htmlFor="media-slot">Use it as</Label>
-        <select id="media-slot" className="min-h-[52px] rounded-input border px-3" value={slot} onChange={(event) => setSlot(event.target.value)}>
+        <select id="media-slot" className="min-h-12 rounded-input border px-3" value={slot} onChange={(event) => setSlot(event.target.value)}>
           <option value="gallery">Gallery only</option>
           <option value="hero-image">Hero image</option>
           <option value="hero-video">Hero video</option>
           <option value="team-photo">Team photo</option>
           <option value="og-image">Social share image</option>
           {services.map((service) => <option key={service.id} value={`service-video:${service.slug}`}>{service.title} video</option>)}
-          {services.map((service) => <option key={`${service.id}-image`} value={`service-image:${service.slug}`}>{service.title} image</option>)}
+          {services.map((service) => <option key={`${service.id}-image`} value={`service-image:${service.slug}`}>{service.title} cover photo</option>)}
+          {services.map((service) => <option key={`${service.id}-gallery`} value={`service-gallery:${service.slug}`}>{service.title} gallery</option>)}
         </select>
         <Button type="submit">Upload</Button>
       </form>
@@ -271,37 +356,81 @@ export function MediaEditor({ media, services }: { media: MediaItem[]; services:
   );
 }
 
-export function ReviewsEditor({ reviews }: { reviews: Review[] }) {
+export function ReviewsEditor({ reviews, googleUrl }: { reviews: Review[]; googleUrl: string }) {
   const { pending, run } = useSave();
-  const blank = (): Review => ({ id: uid("rev"), name: "", text: "", service: "", rating: 5, date: new Date().toISOString().slice(0, 10), source: "manual", visible: true, order: reviews.length + 1 });
-  const [current, setCurrent] = useState<Review>(blank());
+  const blank = (): Review => ({ id: uid("rev"), name: "", text: "", service: "", rating: 5, date: new Date().toISOString().slice(0, 10), source: "manual", status: "approved", email: "", suburb: "", order: reviews.length + 1 });
+  const [current, setCurrent] = useState<Review | null>(null);
+  const [tab, setTab] = useState<Review["status"]>(reviews.some((review) => review.status === "pending") ? "pending" : "approved");
+  const counts = { pending: 0, approved: 0, rejected: 0 } as Record<Review["status"], number>;
+  reviews.forEach((review) => { counts[review.status] += 1; });
+  const list = byOrder(reviews).filter((review) => review.status === tab);
   return (
-    <div className="space-y-4">
-      <form className="grid gap-3 rounded-card bg-white p-4 shadow-card" onSubmit={(event) => { event.preventDefault(); run(async () => { const result = await saveReviewAction(current); if (result.ok) setCurrent(blank()); return result; }); }}>
-        <Label htmlFor="review-name">Name</Label>
-        <Input id="review-name" value={current.name} onChange={(event) => setCurrent({ ...current, name: event.target.value })} />
-        <Label htmlFor="review-text">Review</Label>
-        <Textarea id="review-text" value={current.text} onChange={(event) => setCurrent({ ...current, text: event.target.value })} />
-        <Label htmlFor="review-service">Service</Label>
-        <Input id="review-service" value={current.service} onChange={(event) => setCurrent({ ...current, service: event.target.value })} />
-        <Label htmlFor="review-rating">Stars</Label>
-        <Input id="review-rating" type="number" min={1} max={5} value={current.rating} onChange={(event) => setCurrent({ ...current, rating: Number(event.target.value) })} />
-        <label className="flex gap-2"><input type="checkbox" checked={current.visible} onChange={(event) => setCurrent({ ...current, visible: event.target.checked })} /> Visible</label>
-        <label className="flex gap-2"><input type="checkbox" checked={current.source === "sample"} onChange={(event) => setCurrent({ ...current, source: event.target.checked ? "sample" : "manual" })} /> Mark as sample</label>
-        <Button type="submit" disabled={pending}>Save review</Button>
-      </form>
-      {byOrder(reviews).map((review) => (
-        <article key={review.id} className="rounded-card bg-white p-4 shadow-card">
-          <p className="font-bold">{review.name} · {review.source}{review.visible ? "" : " · hidden"}</p>
-          <p className="mt-1 text-sm">{review.text}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => setCurrent(review)}>Edit</Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => run(() => saveReviewAction({ ...review, visible: !review.visible }))}>{review.visible ? "Hide" : "Show"}</Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => run(() => reorderAction("reviews", review.id, -1))}>Up</Button>
-            <ConfirmDialog title="Delete review?" body="It will disappear from the public site." confirmLabel="Delete" onConfirm={() => run(() => deleteReviewAction(review.id))} trigger={<Button type="button" size="sm" variant="danger">Delete</Button>} />
+    <div className="space-y-5">
+      <div className="rounded-card bg-white p-4 shadow-card">
+        <p className="text-sm text-slate">Reviews customers send from the website land in <strong>Pending</strong>. Nothing appears on the site until you approve it.</p>
+        <p className="mt-1 text-sm text-slate">Google review link: {googleUrl ? <a className="font-semibold text-brand underline" href={googleUrl} target="_blank" rel="noopener noreferrer">{googleUrl}</a> : <span>not set yet. Add it in <a className="font-semibold text-brand underline" href="/admin/settings">Settings</a> once your Google Business profile is live.</span>}</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {(["pending", "approved", "rejected"] as const).map((status) => (
+          <button key={status} type="button" onClick={() => setTab(status)} className={`inline-flex items-center gap-2 rounded-full px-4 py-2 font-semibold capitalize ${tab === status ? "bg-navy text-white" : "bg-white text-navy shadow-card"}`}>
+            {status}
+            <span className={`rounded-full px-2 text-xs ${status === "pending" && counts.pending ? "bg-sun text-navy" : tab === status ? "bg-white/20" : "bg-mist"}`}>{counts[status]}</span>
+          </button>
+        ))}
+        <Button type="button" size="sm" variant="outline" className="ml-auto" onClick={() => setCurrent(blank())}>Add a review manually</Button>
+      </div>
+      {list.length === 0 && <p className="rounded-card bg-white p-6 text-slate shadow-card">{tab === "pending" ? "No reviews waiting. You’re all caught up!" : `No ${tab} reviews.`}</p>}
+      <div className="grid gap-3 lg:grid-cols-2">
+        {list.map((review) => (
+          <article key={review.id} className="rounded-card bg-white p-5 shadow-card">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-bold text-navy">{review.name}</p>
+              <span className="text-sun" aria-label={`${review.rating} stars`}>{"★".repeat(review.rating)}<span className="text-line">{"★".repeat(5 - review.rating)}</span></span>
+            </div>
+            <p className="text-xs text-slate">{[review.service, review.suburb, review.date, review.source === "customer" ? "sent from website" : review.source, review.email].filter(Boolean).join(" · ")}</p>
+            <p className="mt-3 text-[15px]">{review.text}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {review.status !== "approved" && <Button type="button" size="sm" variant="accent" disabled={pending} onClick={() => run(() => moderateReviewAction(review.id, "approved"))}>Approve & publish</Button>}
+              {review.status !== "rejected" && <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => run(() => moderateReviewAction(review.id, "rejected"))}>{review.status === "approved" ? "Unpublish" : "Reject"}</Button>}
+              <Button type="button" size="sm" variant="ghost" onClick={() => setCurrent(review)}>Edit</Button>
+              {review.status === "approved" && <Button type="button" size="sm" variant="ghost" onClick={() => run(() => reorderAction("reviews", review.id, -1))}>Move up</Button>}
+              <ConfirmDialog title="Delete review?" body="This removes it permanently." confirmLabel="Delete" onConfirm={() => run(() => deleteReviewAction(review.id))} trigger={<Button type="button" size="sm" variant="danger">Delete</Button>} />
+            </div>
+          </article>
+        ))}
+      </div>
+      {current && (
+        <form className="grid gap-3 rounded-card bg-white p-5 shadow-card" onSubmit={(event) => { event.preventDefault(); run(async () => { const result = await saveReviewAction(current); if (result.ok) setCurrent(null); return result; }); }}>
+          <h2 className="text-xl font-bold text-navy">{reviews.some((item) => item.id === current.id) ? "Edit review" : "Add a review"}</h2>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div><Label htmlFor="review-name">Name</Label><Input id="review-name" value={current.name} onChange={(event) => setCurrent({ ...current, name: event.target.value })} /></div>
+            <div><Label htmlFor="review-service">Service</Label><Input id="review-service" value={current.service} onChange={(event) => setCurrent({ ...current, service: event.target.value })} /></div>
+            <div><Label htmlFor="review-rating">Stars</Label><Input id="review-rating" type="number" min={1} max={5} value={current.rating} onChange={(event) => setCurrent({ ...current, rating: Number(event.target.value) })} /></div>
           </div>
-        </article>
-      ))}
+          <Label htmlFor="review-text">Review</Label>
+          <Textarea id="review-text" value={current.text} onChange={(event) => setCurrent({ ...current, text: event.target.value })} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="review-source">Where it came from</Label>
+              <Select id="review-source" value={current.source} onChange={(event) => setCurrent({ ...current, source: event.target.value as Review["source"] })}>
+                <option value="manual">Added by me</option>
+                <option value="google">Copied from Google</option>
+                <option value="customer">Sent from website</option>
+                <option value="sample">Sample (placeholder)</option>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="review-status">Status</Label>
+              <Select id="review-status" value={current.status} onChange={(event) => setCurrent({ ...current, status: event.target.value as Review["status"] })}>
+                <option value="approved">Approved (on website)</option>
+                <option value="pending">Pending</option>
+                <option value="rejected">Rejected</option>
+              </Select>
+            </div>
+          </div>
+          <div className="flex gap-2"><Button type="submit" disabled={pending}>Save review</Button><Button type="button" variant="ghost" onClick={() => setCurrent(null)}>Cancel</Button></div>
+        </form>
+      )}
     </div>
   );
 }
@@ -322,7 +451,7 @@ export function FaqsEditor({ faqs }: { faqs: Faq[] }) {
       </form>
       {byOrder(faqs).map((faq) => (
         <article key={faq.id} className="rounded-card bg-white p-4 shadow-card">
-          <p className="text-sm font-semibold text-teal-deep">{faq.category}</p>
+          <p className="text-sm font-semibold text-brand">{faq.category}</p>
           <h2 className="font-bold">{faq.question}</h2>
           <div className="mt-2 flex gap-2">
             <Button type="button" size="sm" variant="outline" onClick={() => setCurrent(faq)}>Edit</Button>
@@ -339,64 +468,98 @@ export function FaqsEditor({ faqs }: { faqs: Faq[] }) {
 export function SettingsEditor({ settings, localMode }: { settings: Settings; localMode: boolean }) {
   const { pending, run } = useSave();
   const [current, setCurrent] = useState(settings);
-  const areas = current.serviceAreas.join("\n");
+  const set = (patch: Partial<Settings>) => setCurrent((value) => ({ ...value, ...patch }));
   return (
-    <form className="grid gap-4" onSubmit={(event) => { event.preventDefault(); run(() => saveSettingsAction(current)); }}>
-      <Field label="Business name" value={current.businessName} onChange={(value) => setCurrent({ ...current, businessName: value })} />
-      <Field label="Short name" value={current.shortName} onChange={(value) => setCurrent({ ...current, shortName: value })} />
-      <Field label="Phone" value={current.phoneDisplay} onChange={(value) => setCurrent({ ...current, phoneDisplay: value })} />
-      <Field label="Phone link" value={current.phoneTel} onChange={(value) => setCurrent({ ...current, phoneTel: value })} />
-      <Field label="WhatsApp URL" value={current.whatsappUrl} onChange={(value) => setCurrent({ ...current, whatsappUrl: value })} />
-      <Field label="Public email" value={current.email} onChange={(value) => setCurrent({ ...current, email: value })} />
-      <Field label="Notification email" value={current.notificationEmail} onChange={(value) => setCurrent({ ...current, notificationEmail: value })} />
-      <Field label="Address" value={current.address} onChange={(value) => setCurrent({ ...current, address: value })} />
-      <label className="block text-sm font-semibold">Service areas, one per line
-        <Textarea className="mt-1 font-normal" value={areas} onChange={(event) => setCurrent({ ...current, serviceAreas: event.target.value.split("\n").map((line) => line.trim()).filter(Boolean) })} />
-      </label>
-      <Field label="Facebook" value={current.facebook} onChange={(value) => setCurrent({ ...current, facebook: value })} />
-      <Field label="Instagram" value={current.instagram} onChange={(value) => setCurrent({ ...current, instagram: value })} />
-      <Field label="TikTok" value={current.tiktok} onChange={(value) => setCurrent({ ...current, tiktok: value })} />
-      <Field label="Google reviews link" value={current.google} onChange={(value) => setCurrent({ ...current, google: value })} />
-      <Field label="ABN" value={current.abn} onChange={(value) => setCurrent({ ...current, abn: value })} />
-      <Field label="Licence" value={current.licence} onChange={(value) => setCurrent({ ...current, licence: value })} />
-      <Field label="Insurance" value={current.insurance} onChange={(value) => setCurrent({ ...current, insurance: value })} />
-      <div className="grid gap-2">
+    <form className="grid gap-6" onSubmit={(event) => { event.preventDefault(); run(() => saveSettingsAction(current)); }}>
+      <Group title="Business & contact" note="These show across the website, in the chat and in emails.">
+        <Field label="Business name" value={current.businessName} onChange={(value) => set({ businessName: value })} />
+        <Field label="Short name" value={current.shortName} onChange={(value) => set({ shortName: value })} />
+        <Field label="Phone (as shown)" value={current.phoneDisplay} placeholder="0401 647 545" onChange={(value) => set({ phoneDisplay: value, phoneTel: toTel(value) || current.phoneTel })} />
+        <Field label="Phone for call links" value={current.phoneTel} placeholder="+61401647545" onChange={(value) => set({ phoneTel: value })} />
+        <Field label="Public email" value={current.email} note="This is also the admin sign-in email." onChange={(value) => set({ email: value })} />
+        <Field label="Where new leads are emailed" value={current.notificationEmail} onChange={(value) => set({ notificationEmail: value })} />
+        <Field label="Address (optional)" value={current.address} onChange={(value) => set({ address: value })} />
+        <Field label="WhatsApp link (optional)" value={current.whatsappUrl} placeholder="Leave blank to use the phone number" onChange={(value) => set({ whatsappUrl: value })} />
+      </Group>
+
+      <Group title="Social media & Google" note="Paste the full link to each profile. Icons stay on the site and open the network’s home page until a link is added.">
+        <Field label="Facebook page" value={current.facebook} placeholder="https://facebook.com/…" onChange={(value) => set({ facebook: value })} />
+        <Field label="Instagram" value={current.instagram} placeholder="https://instagram.com/…" onChange={(value) => set({ instagram: value })} />
+        <Field label="TikTok" value={current.tiktok} placeholder="https://tiktok.com/@…" onChange={(value) => set({ tiktok: value })} />
+        <Field label="YouTube (optional)" value={current.youtube} placeholder="https://youtube.com/@…" onChange={(value) => set({ youtube: value })} />
+        <Field label="Google review link" value={current.google} placeholder="https://g.page/r/…/review" note="From Google Business Profile → Ask for reviews. Used by every “Review us on Google” button." onChange={(value) => set({ google: value })} />
+      </Group>
+
+      <Group title="Homepage">
+        <Field label="Hero headline" value={current.heroHeadline} onChange={(value) => set({ heroHeadline: value })} />
+        <label className="block text-sm font-semibold text-navy sm:col-span-2">Hero text<Textarea className="mt-1 font-normal" value={current.heroSubtext} onChange={(event) => set({ heroSubtext: event.target.value })} /></label>
+        <p className="text-sm text-slate sm:col-span-2">Upload a hero photo or team photo in <a href="/admin/media" className="font-semibold text-brand underline">Gallery & media</a>.</p>
+      </Group>
+
+      <Group title="Service areas">
+        <label className="block text-sm font-semibold text-navy sm:col-span-2">One suburb per line
+          <Textarea className="mt-1 min-h-48 font-normal" value={current.serviceAreas.join("\n")} onChange={(event) => set({ serviceAreas: event.target.value.split("\n").map((line) => line.trim()).filter(Boolean) })} />
+        </label>
+      </Group>
+
+      <Group title="Opening hours">
         {current.openingHours.map((hour, index) => (
-          <label key={hour.day} className="grid gap-1 text-sm font-semibold sm:grid-cols-[140px_1fr] sm:items-center">{hour.day}
-            <Input value={hour.hours} onChange={(event) => setCurrent({ ...current, openingHours: current.openingHours.map((item, itemIndex) => itemIndex === index ? { ...item, hours: event.target.value } : item) })} />
+          <label key={hour.day} className="grid gap-1 text-sm font-semibold text-navy sm:grid-cols-[120px_1fr] sm:items-center">{hour.day}
+            <Input value={hour.hours} onChange={(event) => set({ openingHours: current.openingHours.map((item, itemIndex) => (itemIndex === index ? { ...item, hours: event.target.value } : item)) })} />
           </label>
         ))}
+      </Group>
+
+      <Group title="Business details (optional)">
+        <Field label="ABN" value={current.abn} onChange={(value) => set({ abn: value })} />
+        <Field label="Licence" value={current.licence} onChange={(value) => set({ licence: value })} />
+        <Field label="Insurance" value={current.insurance} onChange={(value) => set({ insurance: value })} />
+        <p className="text-sm text-slate sm:col-span-2">Trust numbers (e.g. “500+ homes cleaned”) only show when you fill them in. Please use real figures.</p>
+        {[0, 1, 2].map((index) => (
+          <div key={index} className="grid grid-cols-2 gap-2 sm:col-span-2">
+            <Input placeholder="Number, e.g. 500+" aria-label={`Stat ${index + 1} value`} value={current.stats[index]?.value || ""} onChange={(event) => { const stats = [...current.stats]; stats[index] = { value: event.target.value, label: stats[index]?.label || "" }; set({ stats }); }} />
+            <Input placeholder="Label, e.g. homes cleaned" aria-label={`Stat ${index + 1} label`} value={current.stats[index]?.label || ""} onChange={(event) => { const stats = [...current.stats]; stats[index] = { value: stats[index]?.value || "", label: event.target.value }; set({ stats }); }} />
+          </div>
+        ))}
+      </Group>
+
+      <Group title="Search engines (SEO)">
+        <Field label="Page title" value={current.seoTitle} onChange={(value) => set({ seoTitle: value })} />
+        <label className="block text-sm font-semibold text-navy sm:col-span-2">Description<Textarea className="mt-1 min-h-20 font-normal" value={current.seoDescription} onChange={(event) => set({ seoDescription: event.target.value })} /></label>
+      </Group>
+
+      <div className="sticky bottom-0 flex flex-wrap gap-3 rounded-card bg-white p-4 shadow-soft">
+        <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save settings"}</Button>
+        {localMode && <ConfirmDialog title="Restore starter content?" body="This puts the original services, FAQs and sample reviews back and clears local leads." confirmLabel="Restore" onConfirm={() => run(() => resetLocalDataAction())} trigger={<Button type="button" variant="danger">Restore starter content</Button>} />}
       </div>
-      <Field label="SEO title" value={current.seoTitle} onChange={(value) => setCurrent({ ...current, seoTitle: value })} />
-      <label className="block text-sm font-semibold">SEO description
-        <Textarea className="mt-1 font-normal" value={current.seoDescription} onChange={(event) => setCurrent({ ...current, seoDescription: event.target.value })} />
-      </label>
-      <Field label="Hero headline" value={current.heroHeadline} onChange={(value) => setCurrent({ ...current, heroHeadline: value })} />
-      <label className="block text-sm font-semibold">Hero subtext
-        <Textarea className="mt-1 font-normal" value={current.heroSubtext} onChange={(event) => setCurrent({ ...current, heroSubtext: event.target.value })} />
-      </label>
-      <p className="text-sm text-slate">Trust numbers stay hidden until you add a real figure and a label. Leave them blank rather than guessing.</p>
-      {[0, 1, 2].map((index) => (
-        <div key={index} className="grid gap-2 sm:grid-cols-2">
-          <Input placeholder="Value" aria-label={`Stat ${index + 1} value`} value={current.stats[index]?.value || ""} onChange={(event) => {
-            const stats = [...current.stats];
-            stats[index] = { value: event.target.value, label: stats[index]?.label || "" };
-            setCurrent({ ...current, stats });
-          }} />
-          <Input placeholder="Label" aria-label={`Stat ${index + 1} label`} value={current.stats[index]?.label || ""} onChange={(event) => {
-            const stats = [...current.stats];
-            stats[index] = { value: stats[index]?.value || "", label: event.target.value };
-            setCurrent({ ...current, stats });
-          }} />
-        </div>
-      ))}
-      <Button type="submit" disabled={pending}>Save settings</Button>
-      {localMode && <ConfirmDialog title="Restore starter content?" body="This puts the original services, FAQs and sample reviews back and clears local leads. Uploaded files in the uploads folder are left as they are." confirmLabel="Restore" onConfirm={() => run(() => resetLocalDataAction())} trigger={<Button type="button" variant="danger">Restore starter content</Button>} />}
     </form>
   );
 }
 
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function toTel(display: string) {
+  const digits = display.replace(/\D/g, "");
+  if (/^0\d{9}$/.test(digits)) return `+61${digits.slice(1)}`;
+  return "";
+}
+
+function Group({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
+  return (
+    <fieldset className="rounded-card bg-white p-5 shadow-card md:p-6">
+      <legend className="sr-only">{title}</legend>
+      <h2 className="text-xl font-bold text-navy">{title}</h2>
+      {note && <p className="mt-1 text-sm text-slate">{note}</p>}
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">{children}</div>
+    </fieldset>
+  );
+}
+
+function Field({ label, value, onChange, placeholder, note }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; note?: string }) {
   const id = label.toLowerCase().replace(/[^a-z]+/g, "-");
-  return <label className="block text-sm font-semibold" htmlFor={id}>{label}<Input id={id} className="mt-1 font-normal" value={value} onChange={(event) => onChange(event.target.value)} /></label>;
+  return (
+    <label className="block text-sm font-semibold text-navy" htmlFor={id}>
+      {label}
+      <Input id={id} className="mt-1 font-normal" value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
+      {note && <span className="mt-1 block text-xs font-normal text-slate">{note}</span>}
+    </label>
+  );
 }

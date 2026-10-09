@@ -53,7 +53,7 @@ export function ContactForm() {
         <Textarea id="contact-message" {...form.register("message")} />
         <FieldError message={form.formState.errors.message?.message} />
       </div>
-      {form.formState.errors.root?.message && <p className="text-sm font-medium text-[#9e2a2a]" role="alert">{form.formState.errors.root.message}</p>}
+      {form.formState.errors.root?.message && <p className="text-sm font-medium text-danger" role="alert">{form.formState.errors.root.message}</p>}
       <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? "Sending…" : "Send message"}</Button>
     </form>
   );

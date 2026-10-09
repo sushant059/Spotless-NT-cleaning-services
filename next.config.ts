@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  experimental: {
+    // Admin photo and video uploads go through server actions, which default to a 1MB limit.
+    serverActions: { bodySizeLimit: "45mb" },
+  },
   images: {
     remotePatterns: [{ protocol: "https", hostname: "**.supabase.co" }],
   },

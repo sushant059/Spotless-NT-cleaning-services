@@ -90,8 +90,8 @@ export function BookingForm({ services, areas, blocked, settings, initialService
         <p className="mt-2 text-slate">{"We'll call to confirm the time and the fixed price. The clean is not locked in until we speak with you."}</p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <Button type="button" variant="outline" onClick={() => navigator.clipboard.writeText(reference)}>Copy reference</Button>
-          <a className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-whatsapp px-6 font-semibold text-ink" href={waLink(settings.phoneTel, `Hi Spotless NT, my booking reference is ${reference}.`)}>WhatsApp</a>
-          <a className="inline-flex min-h-[52px] items-center justify-center rounded-full border-2 border-teal-deep px-6 font-semibold text-teal-deep" href={`tel:${settings.phoneTel}`}>Call</a>
+          <a className="inline-flex min-h-12 items-center justify-center rounded-full bg-whatsapp px-6 font-semibold text-white" href={waLink(settings.phoneTel, `Hi Spotless NT, my booking reference is ${reference}.`)}>WhatsApp</a>
+          <a className="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-brand px-6 font-semibold text-brand" href={`tel:${settings.phoneTel}`}>Call</a>
         </div>
       </div>
     );
@@ -101,7 +101,7 @@ export function BookingForm({ services, areas, blocked, settings, initialService
     <form className="rounded-card bg-white p-5 shadow-card md:p-8" onSubmit={form.handleSubmit(onSubmit)} noValidate>
       <ol className="mb-6 flex flex-wrap gap-2" aria-label="Booking progress">
         {STEPS.map((label, index) => (
-          <li key={label} className={cn("rounded-full px-3 py-1 text-sm font-semibold", index === step ? "bg-teal text-white" : index < step ? "bg-mint text-ink" : "bg-sky text-slate")}>{index + 1}. {label}</li>
+          <li key={label} className={cn("rounded-full px-3 py-1 text-sm font-semibold", index === step ? "bg-brand text-white" : index < step ? "bg-leaf text-ink" : "bg-brand-light text-slate")}>{index + 1}. {label}</li>
         ))}
       </ol>
       <div className="h-0 overflow-hidden" aria-hidden>
@@ -112,24 +112,24 @@ export function BookingForm({ services, areas, blocked, settings, initialService
         <div className="grid gap-3 sm:grid-cols-2">
           {visible.map((service) => {
             const selected = values.services.includes(service.slug);
-            return <button type="button" key={service.id} aria-pressed={selected} onClick={() => toggleService(service.slug)} className={cn("rounded-card border p-4 text-left", selected ? "border-teal bg-sky" : "border-[#d5e6ea]")}><span className="font-bold">{service.title}</span><span className="mt-1 block text-sm text-slate">{service.summary}</span></button>;
+            return <button type="button" key={service.id} aria-pressed={selected} onClick={() => toggleService(service.slug)} className={cn("rounded-card border p-4 text-left", selected ? "border-brand bg-brand-light" : "border-line")}><span className="font-bold">{service.title}</span><span className="mt-1 block text-sm text-slate">{service.summary}</span></button>;
           })}
         </div>
       )}
       {step === 1 && (
         <div className="space-y-5">
           {values.services.map((slug) => (
-            <fieldset key={slug} className="rounded-2xl border border-[#d5e6ea] p-4">
+            <fieldset key={slug} className="rounded-2xl border border-line p-4">
               <legend className="px-1 font-bold">{SERVICE_TITLES[slug] || slug}</legend>
               <div className="space-y-3">
                 {(SERVICE_FIELDS[slug] ?? []).map((field) => {
                   const value = values.details[field.key];
                   if (field.kind === "stepper") {
                     const current = Number(value ?? field.defaultValue);
-                    return <div key={field.key} className="flex items-center justify-between"><span>{field.label}</span><span className="flex items-center gap-2"><button type="button" className="grid h-10 w-10 place-items-center rounded-full bg-sky" aria-label={`Fewer ${field.label}`} onClick={() => setDetail(field.key, Math.max(field.min, current - 1))}><Minus className="h-4 w-4" /></button><strong>{current}</strong><button type="button" className="grid h-10 w-10 place-items-center rounded-full bg-sky" aria-label={`More ${field.label}`} onClick={() => setDetail(field.key, Math.min(field.max, current + 1))}><Plus className="h-4 w-4" /></button></span></div>;
+                    return <div key={field.key} className="flex items-center justify-between"><span>{field.label}</span><span className="flex items-center gap-2"><button type="button" className="grid h-10 w-10 place-items-center rounded-full bg-brand-light" aria-label={`Fewer ${field.label}`} onClick={() => setDetail(field.key, Math.max(field.min, current - 1))}><Minus className="h-4 w-4" /></button><strong>{current}</strong><button type="button" className="grid h-10 w-10 place-items-center rounded-full bg-brand-light" aria-label={`More ${field.label}`} onClick={() => setDetail(field.key, Math.min(field.max, current + 1))}><Plus className="h-4 w-4" /></button></span></div>;
                   }
                   if (field.kind === "toggle") return <label key={field.key} className="flex gap-2"><input type="checkbox" checked={Boolean(value)} onChange={(event) => setDetail(field.key, event.target.checked)} />{field.label}</label>;
-                  if (field.kind === "choice") return <div key={field.key}><p className="mb-2 font-semibold">{field.label}</p><div className="flex flex-wrap gap-2">{field.options.map((option) => <button type="button" key={option} aria-pressed={value === option} className={cn("rounded-full px-3 py-2 text-sm font-semibold", value === option ? "bg-teal text-white" : "bg-sky")} onClick={() => setDetail(field.key, option)}>{option}</button>)}</div></div>;
+                  if (field.kind === "choice") return <div key={field.key}><p className="mb-2 font-semibold">{field.label}</p><div className="flex flex-wrap gap-2">{field.options.map((option) => <button type="button" key={option} aria-pressed={value === option} className={cn("rounded-full px-3 py-2 text-sm font-semibold", value === option ? "bg-brand text-white" : "bg-brand-light")} onClick={() => setDetail(field.key, option)}>{option}</button>)}</div></div>;
                   return <div key={field.key}><Label>{field.label}</Label><Textarea value={String(value ?? "")} placeholder={field.placeholder} onChange={(event) => setDetail(field.key, event.target.value)} /></div>;
                 })}
               </div>
@@ -146,7 +146,7 @@ export function BookingForm({ services, areas, blocked, settings, initialService
           <div>
             <p className="mb-2 text-sm font-semibold">Time window</p>
             <div className="grid gap-2 sm:grid-cols-2">
-              {TIME_WINDOWS.map((window) => <button type="button" key={window.id} aria-pressed={values.timeWindow === window.id} className={cn("min-h-[52px] rounded-full px-4 font-semibold", values.timeWindow === window.id ? "bg-teal text-white" : "bg-sky")} onClick={() => form.setValue("timeWindow", window.id)}>{window.label}</button>)}
+              {TIME_WINDOWS.map((window) => <button type="button" key={window.id} aria-pressed={values.timeWindow === window.id} className={cn("min-h-12 rounded-full px-4 font-semibold", values.timeWindow === window.id ? "bg-brand text-white" : "bg-brand-light")} onClick={() => form.setValue("timeWindow", window.id)}>{window.label}</button>)}
             </div>
           </div>
           {blocked.length > 0 && <p className="text-sm text-slate">Unavailable: {blocked.map((item) => item.date).join(", ")}.</p>}
@@ -176,7 +176,7 @@ export function BookingForm({ services, areas, blocked, settings, initialService
           <p className="text-slate">{"We'll call to confirm. Sending this request does not lock the time until we say so."}</p>
         </div>
       )}
-      {error && <p className="mt-4 text-sm font-medium text-[#9e2a2a]" role="alert">{error}</p>}
+      {error && <p className="mt-4 text-sm font-medium text-danger" role="alert">{error}</p>}
       <div className="mt-6 flex flex-wrap gap-3">
         {step > 0 && <Button type="button" variant="ghost" onClick={() => { setError(""); setStep((current) => current - 1); }}>Back</Button>}
         {step < 5 && <Button type="button" onClick={continueStep}>Continue</Button>}

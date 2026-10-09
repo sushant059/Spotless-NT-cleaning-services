@@ -70,6 +70,16 @@ export const bookingSchema = z.object({
   company_website: z.string(),
 });
 
+export const reviewSchema = z.object({
+  name: z.string().trim().min(2, "Enter your name").max(60),
+  email: z.string().trim().max(120).refine((value) => value === "" || z.string().email().safeParse(value).success, "Enter a valid email or leave it blank"),
+  suburb: z.string().trim().max(60),
+  service: z.string().trim().max(80),
+  rating: z.number().int().min(1, "Choose a star rating").max(5),
+  text: z.string().trim().min(10, "Tell us a little more (at least 10 characters)").max(1200),
+  company_website: z.string(),
+});
+
 export function isPastDate(isoDate: string, today = darwinISODate()) {
   return isoDate < today;
 }
@@ -108,3 +118,4 @@ export type QuoteInput = z.infer<typeof quoteSchema>;
 export type ContactInput = z.infer<typeof contactSchema>;
 export type ChatInput = z.infer<typeof chatSchema>;
 export type BookingInput = z.infer<typeof bookingSchema>;
+export type ReviewInput = z.infer<typeof reviewSchema>;

@@ -1,6 +1,6 @@
 -- Spotless NT schema, row level security and storage.
--- Run this in the Supabase SQL editor, then create an Auth user
--- for regmisusanth94@gmail.com. The Next.js app seeds content
+-- Run this in the Supabase SQL editor (it is safe to run again after updates), then create an Auth user
+-- for regmisushant94@gmail.com. The Next.js app seeds content
 -- the first time it connects with the service role key.
 
 create table if not exists public.admin_users (
@@ -8,7 +8,7 @@ create table if not exists public.admin_users (
 );
 
 insert into public.admin_users (email)
-values ('regmisusanth94@gmail.com')
+values ('regmisushant94@gmail.com')
 on conflict (email) do nothing;
 
 create or replace function public.is_admin()
@@ -39,6 +39,7 @@ create table if not exists public.site_settings (
   instagram text not null default '',
   tiktok text not null default '',
   google_url text not null default '',
+  youtube text not null default '',
   abn text not null default '',
   licence text not null default '',
   insurance text not null default '',
@@ -65,8 +66,12 @@ create table if not exists public.services (
   process jsonb not null default '[]',
   faqs jsonb not null default '[]',
   icon text not null default 'layers',
+  category text not null default 'specialty-and-urgent',
+  price_from text not null default '',
+  duration text not null default '',
   image text not null default '',
   video_url text not null default '',
+  gallery jsonb not null default '[]',
   sort_order int not null default 0,
   visible boolean not null default true,
   related jsonb not null default '[]'
@@ -157,8 +162,11 @@ create table if not exists public.reviews (
   service text not null default '',
   rating int not null check (rating between 1 and 5),
   review_date date,
-  source text not null check (source in ('sample', 'manual', 'google')),
-  visible boolean not null default true,
+  source text not null check (source in ('sample', 'manual', 'google', 'customer')),
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  visible boolean not null default false,
+  email text not null default '',
+  suburb text not null default '',
   sort_order int not null default 0
 );
 
@@ -185,6 +193,24 @@ create table if not exists public.media (
   created_at timestamptz not null default now()
 );
 
+-- Upgrades for databases created from the first version of this schema.
+-- Safe to run more than once.
+alter table public.site_settings add column if not exists youtube text not null default '';
+alter table public.services add column if not exists category text not null default 'specialty-and-urgent';
+alter table public.services add column if not exists price_from text not null default '';
+alter table public.services add column if not exists duration text not null default '';
+alter table public.services add column if not exists gallery jsonb not null default '[]';
+alter table public.reviews add column if not exists status text not null default 'approved';
+alter table public.reviews add column if not exists email text not null default '';
+alter table public.reviews add column if not exists suburb text not null default '';
+alter table public.reviews drop constraint if exists reviews_source_check;
+alter table public.reviews add constraint reviews_source_check check (source in ('sample', 'manual', 'google', 'customer'));
+alter table public.reviews drop constraint if exists reviews_status_check;
+alter table public.reviews add constraint reviews_status_check check (status in ('pending', 'approved', 'rejected'));
+update public.site_settings set email = 'regmisushant94@gmail.com' where email = 'regmisusanth94@gmail.com';
+update public.site_settings set notification_email = 'regmisushant94@gmail.com' where notification_email = 'regmisusanth94@gmail.com';
+delete from public.admin_users where email = 'regmisusanth94@gmail.com';
+
 alter table public.admin_users enable row level security;
 alter table public.site_settings enable row level security;
 alter table public.services enable row level security;
@@ -198,45 +224,71 @@ alter table public.faqs enable row level security;
 alter table public.blocked_dates enable row level security;
 alter table public.media enable row level security;
 
+drop policy if exists "public read settings" on public.site_settings;
 create policy "public read settings" on public.site_settings for select using (true);
+drop policy if exists "admin write settings" on public.site_settings;
 create policy "admin write settings" on public.site_settings for all using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "public read visible services" on public.services;
 create policy "public read visible services" on public.services for select using (visible = true or public.is_admin());
+drop policy if exists "admin write services" on public.services;
 create policy "admin write services" on public.services for all using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "public read active offers" on public.offers;
 create policy "public read active offers" on public.offers for select using (active = true or public.is_admin());
+drop policy if exists "admin write offers" on public.offers;
 create policy "admin write offers" on public.offers for all using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "admin promo codes" on public.promo_codes;
 create policy "admin promo codes" on public.promo_codes for all using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "admin read leads" on public.leads;
 create policy "admin read leads" on public.leads for select using (public.is_admin());
+drop policy if exists "admin update leads" on public.leads;
 create policy "admin update leads" on public.leads for update using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "admin delete leads" on public.leads;
 create policy "admin delete leads" on public.leads for delete using (public.is_admin());
+drop policy if exists "public insert leads" on public.leads;
 create policy "public insert leads" on public.leads for insert with check (char_length(name) between 2 and 80);
 
+drop policy if exists "admin bookings" on public.bookings;
 create policy "admin bookings" on public.bookings for all using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "public insert bookings" on public.bookings;
 create policy "public insert bookings" on public.bookings for insert with check (char_length(name) between 2 and 80 and char_length(address) between 5 and 160);
 
+drop policy if exists "public read results" on public.before_after;
 create policy "public read results" on public.before_after for select using (true);
+drop policy if exists "admin write results" on public.before_after;
 create policy "admin write results" on public.before_after for all using (public.is_admin()) with check (public.is_admin());
 
-create policy "public read visible reviews" on public.reviews for select using (visible = true or public.is_admin());
+drop policy if exists "public read visible reviews" on public.reviews;
+create policy "public read visible reviews" on public.reviews for select using (status = 'approved' or public.is_admin());
+drop policy if exists "admin write reviews" on public.reviews;
 create policy "admin write reviews" on public.reviews for all using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "public read faqs" on public.faqs;
 create policy "public read faqs" on public.faqs for select using (true);
+drop policy if exists "admin write faqs" on public.faqs;
 create policy "admin write faqs" on public.faqs for all using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "public read blocked dates" on public.blocked_dates;
 create policy "public read blocked dates" on public.blocked_dates for select using (true);
+drop policy if exists "admin write blocked dates" on public.blocked_dates;
 create policy "admin write blocked dates" on public.blocked_dates for all using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "public read media" on public.media;
 create policy "public read media" on public.media for select using (true);
+drop policy if exists "admin write media" on public.media;
 create policy "admin write media" on public.media for all using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "admin users" on public.admin_users;
 create policy "admin users" on public.admin_users for all using (public.is_admin()) with check (public.is_admin());
 
 insert into storage.buckets (id, name, public)
 values ('media', 'media', true)
 on conflict (id) do nothing;
 
+drop policy if exists "public read media files" on storage.objects;
 create policy "public read media files" on storage.objects for select using (bucket_id = 'media');
+drop policy if exists "admin write media files" on storage.objects;
 create policy "admin write media files" on storage.objects for all using (bucket_id = 'media' and public.is_admin()) with check (bucket_id = 'media' and public.is_admin());

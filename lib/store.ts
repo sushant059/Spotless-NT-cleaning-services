@@ -8,6 +8,7 @@ import type {
   Booking,
   Database,
   Faq,
+  IconName,
   Lead,
   MediaItem,
   Offer,
@@ -15,6 +16,7 @@ import type {
   ResultPair,
   Review,
   Service,
+  ServiceCategory,
   Settings,
 } from "@/lib/types";
 
@@ -45,7 +47,7 @@ async function readFileDb(): Promise<Database> {
     const raw = await readFile(filePath, "utf8");
     const parsed = JSON.parse(raw) as Database;
     if (!parsed?.settings || !parsed.services) return seedDatabase();
-    return parsed;
+    return normalizeDb(parsed);
   } catch {
     const seeded = seedDatabase();
     await writeFileDb(seeded);
@@ -60,6 +62,50 @@ async function writeFileDb(db: Database) {
 
 async function loadSupabaseSeeded(sb: SupabaseClient): Promise<Database> {
   return loadSupabase(sb, true);
+}
+
+const ICON_CATEGORY: Record<IconName, ServiceCategory> = {
+  layers: "carpet-and-rugs",
+  rug: "carpet-and-rugs",
+  sofa: "upholstery-and-bedding",
+  bed: "upholstery-and-bedding",
+  armchair: "upholstery-and-bedding",
+  key: "bond-and-property",
+  building: "bond-and-property",
+  paw: "specialty-and-urgent",
+  siren: "specialty-and-urgent",
+};
+
+function categoryFor(slug: string, icon: IconName): ServiceCategory {
+  const seeded = seedDatabase().services.find((service) => service.slug === slug);
+  return seeded?.category ?? ICON_CATEGORY[icon] ?? "specialty-and-urgent";
+}
+
+const LEGACY_EMAIL = "regmisusanth94@gmail.com";
+
+// Fills fields added after a database was first created, so older data keeps working.
+export function normalizeDb(db: Database): Database {
+  const fresh = seedDatabase();
+  db.settings = { ...fresh.settings, ...db.settings };
+  if (db.settings.email === LEGACY_EMAIL) db.settings.email = fresh.settings.email;
+  if (db.settings.notificationEmail === LEGACY_EMAIL) db.settings.notificationEmail = fresh.settings.notificationEmail;
+  db.services = db.services.map((service) => ({
+    ...service,
+    category: service.category || categoryFor(service.slug, service.icon),
+    priceFrom: service.priceFrom ?? "",
+    duration: service.duration ?? "",
+    gallery: Array.isArray(service.gallery) ? service.gallery : [],
+  }));
+  db.reviews = db.reviews.map((review) => {
+    const legacy = review as Review & { visible?: boolean };
+    return {
+      ...review,
+      status: review.status || (legacy.visible === false ? "pending" : "approved"),
+      email: review.email ?? "",
+      suburb: review.suburb ?? "",
+    };
+  });
+  return db;
 }
 
 function asArray<T>(value: unknown, fallback: T[] = []): T[] {
@@ -81,6 +127,7 @@ function mapSettings(row: Record<string, unknown>): Settings {
     instagram: String(row.instagram ?? ""),
     tiktok: String(row.tiktok ?? ""),
     google: String(row.google_url ?? ""),
+    youtube: String(row.youtube ?? ""),
     abn: String(row.abn ?? ""),
     licence: String(row.licence ?? ""),
     insurance: String(row.insurance ?? ""),
@@ -113,6 +160,7 @@ function settingsRow(settings: Settings) {
     instagram: settings.instagram,
     tiktok: settings.tiktok,
     google_url: settings.google,
+    youtube: settings.youtube,
     abn: settings.abn,
     licence: settings.licence,
     insurance: settings.insurance,
@@ -141,8 +189,12 @@ function mapService(row: Record<string, unknown>): Service {
     process: asArray(row.process),
     faqs: asArray(row.faqs),
     icon: (row.icon as Service["icon"]) || "layers",
+    category: (row.category as Service["category"]) || categoryFor(String(row.slug), (row.icon as Service["icon"]) || "layers"),
+    priceFrom: String(row.price_from ?? ""),
+    duration: String(row.duration ?? ""),
     image: String(row.image ?? ""),
     videoUrl: String(row.video_url ?? ""),
+    gallery: asArray<string>(row.gallery),
     order: Number(row.sort_order ?? 0),
     visible: Boolean(row.visible),
     related: asArray<string>(row.related),
@@ -161,8 +213,12 @@ function serviceRow(service: Service) {
     process: service.process,
     faqs: service.faqs,
     icon: service.icon,
+    category: service.category,
+    price_from: service.priceFrom,
+    duration: service.duration,
     image: service.image,
     video_url: service.videoUrl,
+    gallery: service.gallery,
     sort_order: service.order,
     visible: service.visible,
     related: service.related,
@@ -178,7 +234,7 @@ async function loadSupabase(sb: SupabaseClient, seedIfEmpty: boolean): Promise<D
   const settingsRows = await expect(await sb.from("site_settings").select("*").eq("id", 1).maybeSingle());
   if (!settingsRows) {
     if (!seedIfEmpty) throw new Error("Supabase settings could not be seeded.");
-    await saveSupabase(sb, seedDatabase());
+    await syncSupabase(sb, null, seedDatabase());
     return loadSupabase(sb, false);
   }
   const [services, offers, promos, leads, bookings, results, reviews, faqs, blocked, media] = await Promise.all([
@@ -193,7 +249,7 @@ async function loadSupabase(sb: SupabaseClient, seedIfEmpty: boolean): Promise<D
     expect(await sb.from("blocked_dates").select("*")),
     expect(await sb.from("media").select("*")),
   ]);
-  return {
+  return normalizeDb({
     version: 1,
     settings: mapSettings(settingsRows as Record<string, unknown>),
     services: (services as Record<string, unknown>[]).map(mapService),
@@ -241,7 +297,9 @@ async function loadSupabase(sb: SupabaseClient, seedIfEmpty: boolean): Promise<D
       rating: Number(row.rating ?? 5),
       date: String(row.review_date ?? ""),
       source: (row.source as Review["source"]) || "manual",
-      visible: Boolean(row.visible),
+      status: (row.status as Review["status"]) || (row.visible ? "approved" : "pending"),
+      email: String(row.email ?? ""),
+      suburb: String(row.suburb ?? ""),
       order: Number(row.sort_order ?? 0),
     })),
     faqs: (faqs as Record<string, unknown>[]).map((row) => ({
@@ -264,7 +322,7 @@ async function loadSupabase(sb: SupabaseClient, seedIfEmpty: boolean): Promise<D
       slot: String(row.slot ?? ""),
       createdAt: String(row.created_at),
     })),
-  };
+  });
 }
 
 function mapLead(row: Record<string, unknown>): Lead {
@@ -357,20 +415,16 @@ function bookingRow(booking: Booking) {
   };
 }
 
-async function replaceRows(sb: SupabaseClient, table: string, rows: Record<string, unknown>[]) {
-  const deleted = await sb.from(table).delete().not("id", "is", null);
-  if (deleted.error) throw new Error(deleted.error.message);
-  if (!rows.length) return;
-  const inserted = await sb.from(table).insert(rows);
-  if (inserted.error) throw new Error(inserted.error.message);
-}
+type Row = Record<string, unknown>;
+type Snapshot = { settings: string; tables: Record<string, Row[]> };
 
-async function saveSupabase(sb: SupabaseClient, db: Database) {
-  const settings = await sb.from("site_settings").upsert(settingsRow(db.settings));
-  if (settings.error) throw new Error(settings.error.message);
-  await replaceRows(sb, "services", db.services.map(serviceRow));
-  await replaceRows(
-    sb,
+function snapshot(db: Database): Snapshot {
+  const tables: Record<string, Row[]> = {};
+  const replaceRows = (table: string, rows: Row[]) => {
+    tables[table] = rows;
+  };
+  replaceRows("services", db.services.map(serviceRow));
+  replaceRows(
     "offers",
     db.offers.map((offer) => ({
       id: offer.id,
@@ -386,8 +440,7 @@ async function saveSupabase(sb: SupabaseClient, db: Database) {
       sort_order: offer.order,
     })),
   );
-  await replaceRows(
-    sb,
+  replaceRows(
     "promo_codes",
     db.promos.map((promo) => ({
       id: promo.id,
@@ -401,10 +454,9 @@ async function saveSupabase(sb: SupabaseClient, db: Database) {
       active: promo.active,
     })),
   );
-  await replaceRows(sb, "leads", db.leads.map(leadRow));
-  await replaceRows(sb, "bookings", db.bookings.map(bookingRow));
-  await replaceRows(
-    sb,
+  replaceRows("leads", db.leads.map(leadRow));
+  replaceRows("bookings", db.bookings.map(bookingRow));
+  replaceRows(
     "before_after",
     db.results.map((item) => ({
       id: item.id,
@@ -417,8 +469,7 @@ async function saveSupabase(sb: SupabaseClient, db: Database) {
       sort_order: item.order,
     })),
   );
-  await replaceRows(
-    sb,
+  replaceRows(
     "reviews",
     db.reviews.map((review) => ({
       id: review.id,
@@ -428,12 +479,14 @@ async function saveSupabase(sb: SupabaseClient, db: Database) {
       rating: review.rating,
       review_date: review.date || null,
       source: review.source,
-      visible: review.visible,
+      status: review.status,
+      visible: review.status === "approved",
+      email: review.email,
+      suburb: review.suburb,
       sort_order: review.order,
     })),
   );
-  await replaceRows(
-    sb,
+  replaceRows(
     "faqs",
     db.faqs.map((faq) => ({
       id: faq.id,
@@ -443,13 +496,11 @@ async function saveSupabase(sb: SupabaseClient, db: Database) {
       sort_order: faq.order,
     })),
   );
-  await replaceRows(
-    sb,
+  replaceRows(
     "blocked_dates",
     db.blockedDates.map((item) => ({ id: item.id, blocked_on: item.date, reason: item.reason })),
   );
-  await replaceRows(
-    sb,
+  replaceRows(
     "media",
     db.media.map((item) => ({
       id: item.id,
@@ -460,7 +511,34 @@ async function saveSupabase(sb: SupabaseClient, db: Database) {
       created_at: item.createdAt,
     })),
   );
+  return { settings: JSON.stringify(settingsRow(db.settings)), tables };
 }
+
+// Writes only what changed: upserts new or edited rows and deletes removed ones.
+// The old version deleted every row and re-inserted the lot on each save, which
+// could lose data if an insert failed half way.
+async function syncSupabase(sb: SupabaseClient, before: Snapshot | null, db: Database) {
+  const after = snapshot(db);
+  if (!before || before.settings !== after.settings) {
+    const settings = await sb.from("site_settings").upsert(settingsRow(db.settings));
+    if (settings.error) throw new Error(settings.error.message);
+  }
+  for (const [table, rows] of Object.entries(after.tables)) {
+    const previous = new Map((before?.tables[table] ?? []).map((row) => [String(row.id), JSON.stringify(row)]));
+    const changed = rows.filter((row) => previous.get(String(row.id)) !== JSON.stringify(row));
+    const keep = new Set(rows.map((row) => String(row.id)));
+    const removed = [...previous.keys()].filter((id) => !keep.has(id));
+    if (changed.length) {
+      const upserted = await sb.from(table).upsert(changed);
+      if (upserted.error) throw new Error(upserted.error.message);
+    }
+    if (removed.length) {
+      const deleted = await sb.from(table).delete().in("id", removed);
+      if (deleted.error) throw new Error(deleted.error.message);
+    }
+  }
+}
+
 
 async function loadUncached(): Promise<Database> {
   const sb = supabaseAdmin();
@@ -483,8 +561,9 @@ export async function updateDb(fn: (db: Database) => void) {
     if (sb && !supabaseDown) {
       try {
         const db = await loadSupabase(sb, true);
+        const before = snapshot(db);
         fn(db);
-        await saveSupabase(sb, db);
+        await syncSupabase(sb, before, db);
         return db;
       } catch (error) {
         console.error("Supabase write failed, using local data.", error);

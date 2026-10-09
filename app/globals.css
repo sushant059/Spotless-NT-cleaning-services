@@ -11,10 +11,10 @@ html {
 }
 
 body {
-  background: #eaf8fa;
-  color: #17343c;
+  background: #ffffff;
+  color: #0c1b2f;
   font-size: 16px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 @media (min-width: 768px) {
@@ -23,23 +23,80 @@ body {
   }
 }
 
+h1, h2, h3, h4 {
+  font-family: var(--font-display), var(--font-body), sans-serif;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
 ::selection {
-  background: #7ed9c6;
-  color: #17343c;
+  background: #d6ecfc;
+  color: #0b2f5e;
 }
 
 :focus-visible {
-  outline: 3px solid #09808f;
+  outline: 3px solid #2e9bea;
   outline-offset: 3px;
 }
 
-@keyframes shine {
-  0% { transform: translateX(-130%); }
-  100% { transform: translateX(230%); }
+@layer components {
+  .container-x {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+  .section {
+    @apply py-16 md:py-24;
+  }
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-brand;
+  }
+  .h-section {
+    @apply font-display text-[32px] font-extrabold leading-[1.08] text-navy md:text-5xl;
+  }
+  .lede {
+    @apply mt-4 max-w-2xl text-lg text-slate;
+  }
+  .card {
+    @apply rounded-card border border-line bg-white shadow-card;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold;
+  }
+  .link-arrow {
+    @apply inline-flex items-center gap-1.5 font-semibold text-brand underline-offset-4 hover:underline;
+  }
+  .bg-grid {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  .bg-hero {
+    background:
+      radial-gradient(60% 70% at 85% 10%, rgba(46, 155, 234, 0.45), transparent 60%),
+      radial-gradient(50% 60% at 0% 100%, rgba(59, 169, 53, 0.28), transparent 60%),
+      linear-gradient(160deg, #0b2f5e 0%, #061c3a 100%);
+  }
 }
 
-.shine-bar {
-  animation: shine 3.6s ease-in-out infinite;
+/* Content is visible without JavaScript; the reveal only runs once JS marks the page ready. */
+.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.js [data-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -53,5 +110,9 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  .js [data-reveal] {
+    opacity: 1;
+    transform: none;
   }
 }

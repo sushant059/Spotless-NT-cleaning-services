@@ -1,64 +1,67 @@
 import Link from "next/link";
-import { filled, safeHttpUrl } from "@/lib/utils";
-import type { Settings, Service } from "@/lib/types";
+import { Mail, MapPin, Phone } from "lucide-react";
+import { Logo } from "@/components/brand";
+import { Sparkle } from "@/components/art/sparkle";
+import { SocialIcons } from "@/components/social";
+import { SERVICE_CATEGORIES } from "@/lib/constants";
+import type { Service, Settings } from "@/lib/types";
+import { byOrder, filled } from "@/lib/utils";
 
 export function Footer({ settings, services }: { settings: Settings; services: Service[] }) {
-  const socials = [
-    ["Facebook", settings.facebook],
-    ["Instagram", settings.instagram],
-    ["TikTok", settings.tiktok],
-    ["Google", settings.google],
-  ].filter((entry): entry is [string, string] => Boolean(safeHttpUrl(entry[1])));
+  const visible = byOrder(services).filter((service) => service.visible);
   return (
-    <footer className="bg-ink text-white">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-4">
-        <div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/spotless-nt-logo.svg" alt="Spotless NT Cleaning Services" className="h-16 w-auto rounded-2xl bg-white p-2" />
-          <p className="mt-4 text-sm text-white/80">Cleaner spaces. Healthier lives. Carpet, couch, mattress and bond cleaning around Darwin.</p>
-        </div>
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-mint">Services</h2>
-          <ul className="mt-3 space-y-2 text-sm">
-            {services.filter((service) => service.visible).map((service) => (
-              <li key={service.id}><Link className="hover:text-mint" href={`/services/${service.slug}`}>{service.title}</Link></li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-mint">Quick links</h2>
-          <ul className="mt-3 space-y-2 text-sm">
-            <li><Link className="hover:text-mint" href="/why-us">Why us</Link></li>
-            <li><Link className="hover:text-mint" href="/how-it-works">How it works</Link></li>
-            <li><Link className="hover:text-mint" href="/results">Before and after</Link></li>
-            <li><Link className="hover:text-mint" href="/faqs">FAQs</Link></li>
-            <li><Link className="hover:text-mint" href="/booking">Book a clean</Link></li>
-            <li><Link className="hover:text-mint" href="/privacy">Privacy</Link></li>
-            <li><Link className="hover:text-mint" href="/terms">Terms</Link></li>
-          </ul>
-        </div>
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-mint">Contact</h2>
-          <ul className="mt-3 space-y-2 text-sm">
-            <li><a className="hover:text-mint" href={`tel:${settings.phoneTel}`}>{settings.phoneDisplay}</a></li>
-            <li><a className="hover:text-mint" href={settings.whatsappUrl}>WhatsApp</a></li>
-            <li><a className="hover:text-mint" href={`mailto:${settings.email}`}>{settings.email}</a></li>
-            {filled(settings.address) && <li>{settings.address}</li>}
-            {filled(settings.abn) && <li>ABN {settings.abn}</li>}
-            {filled(settings.licence) && <li>{settings.licence}</li>}
-            {filled(settings.insurance) && <li>{settings.insurance}</li>}
-          </ul>
-          {socials.length > 0 && (
-            <ul className="mt-4 flex flex-wrap gap-3 text-sm">
-              {socials.map(([label, href]) => (
-                <li key={label}><a className="underline decoration-mint underline-offset-4" href={href} target="_blank" rel="noopener noreferrer">{label}</a></li>
+    <footer className="relative overflow-hidden bg-navy-deep text-white">
+      <div className="pointer-events-none absolute inset-0 bg-grid opacity-60" aria-hidden />
+      <Sparkle className="pointer-events-none absolute -right-10 -top-10 h-64 w-64 text-white/[0.03]" />
+      <div className="container-x relative">
+        <div className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1.2fr]">
+          <div>
+            <Logo tone="light" />
+            <p className="mt-5 max-w-xs text-sm leading-relaxed text-white/70">Cleaner spaces. Healthier lives. Locally owned carpet, upholstery and bond cleaning for the Top End.</p>
+            <SocialIcons settings={settings} className="mt-6" />
+          </div>
+          {SERVICE_CATEGORIES.slice(0, 2).map((category, index) => (
+            <div key={category.id}>
+              <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-sky">{index === 0 ? "Services" : " "}</h3>
+              {SERVICE_CATEGORIES.filter((_, i) => i % 2 === index).map((group) => (
+                <div key={group.id} className="mt-4">
+                  <Link href={`/services#${group.id}`} className="font-semibold text-white hover:text-sky">{group.title}</Link>
+                  <ul className="mt-2 space-y-1.5 text-sm text-white/65">
+                    {visible.filter((service) => service.category === group.id).map((service) => (
+                      <li key={service.id}><Link className="hover:text-white" href={`/services/${service.slug}`}>{service.title}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          ))}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-sky">Get in touch</h3>
+            <ul className="mt-4 space-y-3 text-sm">
+              <li><a className="flex items-center gap-3 hover:text-sky" href={`tel:${settings.phoneTel}`}><Phone className="h-4 w-4 text-leaf" aria-hidden />{settings.phoneDisplay}</a></li>
+              <li><a className="flex items-center gap-3 break-all hover:text-sky" href={`mailto:${settings.email}`}><Mail className="h-4 w-4 shrink-0 text-leaf" aria-hidden />{settings.email}</a></li>
+              <li className="flex items-center gap-3 text-white/80"><MapPin className="h-4 w-4 text-leaf" aria-hidden />{filled(settings.address) ? settings.address : "Darwin & surrounds, NT"}</li>
+            </ul>
+            <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm text-white/65">
+              {[
+                ["/how-it-works", "How it works"],
+                ["/results", "Before & after"],
+                ["/offers", "Offers"],
+                ["/reviews", "Reviews"],
+                ["/faqs", "FAQs"],
+                ["/booking", "Book a clean"],
+                ["/privacy", "Privacy"],
+                ["/terms", "Terms"],
+              ].map(([href, label]) => (
+                <li key={href}><Link className="hover:text-white" href={href}>{label}</Link></li>
               ))}
             </ul>
-          )}
+          </div>
         </div>
-      </div>
-      <div className="border-t border-white/10 px-4 py-4 text-center text-sm text-white/70">
-        © {new Date().getFullYear()} {settings.businessName}
+        <div className="flex flex-col gap-2 border-t border-white/10 py-6 text-sm text-white/55 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} {settings.businessName}{filled(settings.abn) ? ` · ABN ${settings.abn}` : ""}</p>
+          <p>{[settings.licence, settings.insurance].filter(filled).join(" · ") || "Proudly serving the Top End"}</p>
+        </div>
       </div>
     </footer>
   );

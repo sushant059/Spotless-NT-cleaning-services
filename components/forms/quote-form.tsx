@@ -56,12 +56,12 @@ export function QuoteForm({ services, areas, settings, initialService = "" }: { 
       <div className="rounded-card bg-white p-6 shadow-card" role="status">
         <h2 className="text-2xl font-bold">Thanks {result.name}</h2>
         <p className="mt-2 text-slate">We saved your quote request. Your reference is <strong className="text-ink">{result.reference}</strong>.</p>
-        {promoMessage && <p className="mt-2 text-teal-deep">{promoMessage}</p>}
+        {promoMessage && <p className="mt-2 text-brand">{promoMessage}</p>}
         <p className="mt-2 text-slate">{"We'll call to confirm a fixed price. This is not a confirmed booking yet."}</p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <Button type="button" variant="outline" onClick={() => navigator.clipboard.writeText(result.reference)}>Copy reference</Button>
-          <a className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-whatsapp px-6 font-semibold text-ink" href={waLink(settings.phoneTel, `Hi Spotless NT, my quote reference is ${result.reference}.`)}>WhatsApp</a>
-          <a className="inline-flex min-h-[52px] items-center justify-center rounded-full border-2 border-teal-deep px-6 font-semibold text-teal-deep" href={`tel:${settings.phoneTel}`}>Call</a>
+          <a className="inline-flex min-h-12 items-center justify-center rounded-full bg-whatsapp px-6 font-semibold text-white" href={waLink(settings.phoneTel, `Hi Spotless NT, my quote reference is ${result.reference}.`)}>WhatsApp</a>
+          <a className="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-brand px-6 font-semibold text-brand" href={`tel:${settings.phoneTel}`}>Call</a>
         </div>
       </div>
     );
@@ -75,7 +75,7 @@ export function QuoteForm({ services, areas, settings, initialService = "" }: { 
       </div>
       <div>
         <Label htmlFor="service">Service</Label>
-        <select id="service" className="min-h-[52px] w-full rounded-input border border-[#c5dde2] bg-white px-4" {...form.register("service")}>
+        <select id="service" className="min-h-12 w-full rounded-input border border-line bg-white px-4" {...form.register("service")}>
           <option value="">Choose a service</option>
           {services.filter((service) => service.visible).map((service) => <option key={service.id} value={service.slug}>{service.title}</option>)}
           <option value="not-sure">Not sure yet</option>
@@ -133,9 +133,9 @@ export function QuoteForm({ services, areas, settings, initialService = "" }: { 
             setPromoMessage(result.message);
           }}>Check</Button>
         </div>
-        {promoMessage && <p className="mt-1 text-sm text-teal-deep">{promoMessage}</p>}
+        {promoMessage && <p className="mt-1 text-sm text-brand">{promoMessage}</p>}
       </div>
-      {form.formState.errors.root?.message && <p className="text-sm font-medium text-[#9e2a2a]" role="alert">{form.formState.errors.root.message}</p>}
+      {form.formState.errors.root?.message && <p className="text-sm font-medium text-danger" role="alert">{form.formState.errors.root.message}</p>}
       <Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? "Sending…" : "Request my quote"}</Button>
     </form>
   );

@@ -1,4 +1,13 @@
-import type { IconName } from "@/lib/types";
+import type { IconName, ServiceCategory } from "@/lib/types";
+
+export const SERVICE_CATEGORIES: { id: ServiceCategory; title: string; short: string; blurb: string; icon: IconName }[] = [
+  { id: "carpet-and-rugs", title: "Carpet & Rugs", short: "Carpet", blurb: "Hot-water extraction that lifts Top End dust, traffic lanes and everyday spills.", icon: "layers" },
+  { id: "upholstery-and-bedding", title: "Upholstery & Bedding", short: "Upholstery", blurb: "Lounges, chairs and mattresses refreshed without soaking the foam.", icon: "sofa" },
+  { id: "bond-and-property", title: "Bond & Property", short: "Bond & office", blurb: "Inspection-ready rentals and tidy workplaces, with paperwork for the agent.", icon: "key" },
+  { id: "specialty-and-urgent", title: "Specialty & Urgent", short: "Specialty", blurb: "Pet accidents, odours, floods and spills that cannot wait until next week.", icon: "siren" },
+];
+
+export const SERVICE_CATEGORY_IDS = SERVICE_CATEGORIES.map((category) => category.id);
 
 export const STATUS_OPTIONS = ["new", "contacted", "quoted", "booked", "completed", "lost"] as const;
 
@@ -9,64 +18,74 @@ export const TIME_WINDOWS = [
   { id: "4-6", label: "4:00pm – 6:00pm" },
 ] as const;
 
-export const PREFERRED_TIMES = ["ASAP", "Today", "Tomorrow", "This week"] as const;
+export const PREFERRED_TIMES = ["ASAP", "Today", "Tomorrow", "This week", "Next week", "Flexible"] as const;
 
 export const NAV_LINKS = [
   { href: "/services", label: "Services" },
-  { href: "/why-us", label: "Why us" },
-  { href: "/how-it-works", label: "How it works" },
-  { href: "/results", label: "Results" },
+  { href: "/results", label: "Before & after" },
+  { href: "/offers", label: "Offers" },
   { href: "/reviews", label: "Reviews" },
+  { href: "/why-us", label: "About" },
   { href: "/faqs", label: "FAQs" },
   { href: "/contact", label: "Contact" },
 ] as const;
 
 export type Field =
-  | { kind: "stepper"; key: string; label: string; min: number; max: number; defaultValue: number }
-  | { kind: "toggle"; key: string; label: string }
-  | { kind: "choice"; key: string; label: string; options: string[] }
-  | { kind: "text"; key: string; label: string; placeholder: string };
+  | { kind: "stepper"; key: string; label: string; min: number; max: number; defaultValue: number; ask?: string }
+  | { kind: "toggle"; key: string; label: string; ask?: string }
+  | { kind: "choice"; key: string; label: string; options: string[]; ask?: string }
+  | { kind: "text"; key: string; label: string; placeholder: string; ask?: string };
+
+/** The question the chat assistant asks for a field. */
+export function fieldQuestion(field: Field) {
+  if (field.ask) return field.ask;
+  if (field.kind === "stepper") return `How many ${field.label.toLowerCase()}?`;
+  if (field.kind === "toggle") return `${field.label}?`;
+  if (field.kind === "choice") return `${field.label}?`;
+  return field.label;
+}
 
 export const SERVICE_FIELDS: Record<string, Field[]> = {
   "carpet-cleaning": [
-    { kind: "stepper", key: "rooms", label: "Rooms", min: 1, max: 20, defaultValue: 1 },
-    { kind: "toggle", key: "hallway", label: "Include the hallway" },
-    { kind: "toggle", key: "stairs", label: "Include the stairs" },
+    { kind: "stepper", key: "rooms", label: "Rooms", ask: "How many rooms of carpet need cleaning?", min: 1, max: 20, defaultValue: 1 },
+    { kind: "toggle", key: "hallway", label: "Include the hallway", ask: "Should we include the hallway?" },
+    { kind: "toggle", key: "stairs", label: "Include the stairs", ask: "Any carpeted stairs to include?" },
   ],
   "couch-and-sofa-cleaning": [
-    { kind: "stepper", key: "seats", label: "Seats", min: 1, max: 20, defaultValue: 3 },
+    { kind: "stepper", key: "seats", label: "Seats", ask: "How many seats is the lounge (all pieces together)?", min: 1, max: 20, defaultValue: 3 },
   ],
   "mattress-cleaning": [
-    { kind: "stepper", key: "single", label: "Single mattresses", min: 0, max: 8, defaultValue: 0 },
+    { kind: "stepper", key: "single", label: "Single mattresses", ask: "How many single mattresses?", min: 0, max: 8, defaultValue: 0 },
     { kind: "stepper", key: "double", label: "Double mattresses", min: 0, max: 8, defaultValue: 0 },
     { kind: "stepper", key: "queen", label: "Queen mattresses", min: 0, max: 8, defaultValue: 0 },
     { kind: "stepper", key: "king", label: "King mattresses", min: 0, max: 8, defaultValue: 0 },
   ],
-  "rug-cleaning": [{ kind: "stepper", key: "rugs", label: "Rugs", min: 1, max: 20, defaultValue: 1 }],
+  "rug-cleaning": [{ kind: "stepper", key: "rugs", label: "Rugs", ask: "How many rugs need cleaning?", min: 1, max: 20, defaultValue: 1 }],
   "upholstery-cleaning": [
-    { kind: "stepper", key: "items", label: "Items (chairs, cushions, ottomans)", min: 1, max: 20, defaultValue: 1 },
+    { kind: "stepper", key: "items", label: "Items (chairs, cushions, ottomans)", ask: "How many items: chairs, ottomans, bed heads and so on?", min: 1, max: 20, defaultValue: 1 },
   ],
   "pet-stain-and-odour-removal": [
-    { kind: "stepper", key: "areas", label: "Areas to treat", min: 1, max: 10, defaultValue: 1 },
+    { kind: "stepper", key: "areas", label: "Areas to treat", ask: "How many spots or areas need treating?", min: 1, max: 10, defaultValue: 1 },
   ],
   "emergency-and-urgent-cleaning": [
-    { kind: "text", key: "what", label: "What happened?", placeholder: "For example: a drink spilled on the lounge carpet" },
+    { kind: "text", key: "what", label: "What happened?", ask: "Oh no! What happened? A quick description helps us bring the right gear.", placeholder: "For example: a drink spilled on the lounge carpet" },
   ],
   "end-of-lease-and-bond-cleaning": [
-    { kind: "stepper", key: "bedrooms", label: "Bedrooms", min: 0, max: 10, defaultValue: 2 },
-    { kind: "stepper", key: "bathrooms", label: "Bathrooms", min: 0, max: 8, defaultValue: 1 },
-    { kind: "choice", key: "property", label: "Property type", options: ["House", "Unit", "Townhouse"] },
+    { kind: "stepper", key: "bedrooms", label: "Bedrooms", ask: "How many bedrooms does the property have?", min: 0, max: 10, defaultValue: 2 },
+    { kind: "stepper", key: "bathrooms", label: "Bathrooms", ask: "And how many bathrooms?", min: 0, max: 8, defaultValue: 1 },
+    { kind: "choice", key: "property", label: "Property type", ask: "Is it a house, unit or townhouse?", options: ["House", "Unit", "Townhouse"] },
   ],
   "office-and-commercial-cleaning": [
     {
       kind: "choice",
       key: "size",
       label: "Approximate size",
+      ask: "Roughly how big is the office?",
       options: ["Small (up to 80 m²)", "Medium (80–200 m²)", "Large (over 200 m²)"],
     },
   ],
   "something-else": [
-    { kind: "text", key: "other", label: "Tell us what you need", placeholder: "A short description is enough" },
+    { kind: "text", key: "other", label: "Tell us what you need", ask: "No problem. What would you like cleaned?", placeholder: "A short description is enough" },
   ],
 };
 

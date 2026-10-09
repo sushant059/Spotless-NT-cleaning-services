@@ -27,18 +27,18 @@ export function LeadsBoard({ leads, bookings, blocked }: { leads: Lead[]; bookin
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className={`rounded-full px-4 py-2 font-semibold ${tab === "leads" ? "bg-teal text-white" : "bg-white"}`} onClick={() => setTab("leads")}>Leads</button>
-        <button type="button" className={`rounded-full px-4 py-2 font-semibold ${tab === "bookings" ? "bg-teal text-white" : "bg-white"}`} onClick={() => setTab("bookings")}>Bookings</button>
-        <a className="ml-auto text-sm font-semibold text-teal-deep" href={tab === "leads" ? "/api/admin/export?type=leads" : "/api/admin/export?type=bookings"}>Download CSV</a>
+        <button type="button" className={`rounded-full px-4 py-2 font-semibold ${tab === "leads" ? "bg-brand text-white" : "bg-white"}`} onClick={() => setTab("leads")}>Leads</button>
+        <button type="button" className={`rounded-full px-4 py-2 font-semibold ${tab === "bookings" ? "bg-brand text-white" : "bg-white"}`} onClick={() => setTab("bookings")}>Bookings</button>
+        <a className="ml-auto text-sm font-semibold text-brand" href={tab === "leads" ? "/api/admin/export?type=leads" : "/api/admin/export?type=bookings"}>Download CSV</a>
       </div>
       <div className="grid gap-3 md:grid-cols-3">
         <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name, phone, suburb, reference" aria-label="Search" />
-        <select className="min-h-[52px] rounded-input border border-[#c5dde2] bg-white px-3" value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filter by status">
+        <select className="min-h-12 rounded-input border border-line bg-white px-3" value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filter by status">
           <option value="all">All statuses</option>
           {STATUS_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}
         </select>
         {tab === "leads" && (
-          <select className="min-h-[52px] rounded-input border border-[#c5dde2] bg-white px-3" value={source} onChange={(event) => setSource(event.target.value)} aria-label="Filter by source">
+          <select className="min-h-12 rounded-input border border-line bg-white px-3" value={source} onChange={(event) => setSource(event.target.value)} aria-label="Filter by source">
             <option value="all">All sources</option>
             <option value="quote">Quote</option>
             <option value="chat">Chat</option>
@@ -78,14 +78,14 @@ function LeadCard({ lead }: { lead: Lead }) {
         </select>
       </div>
       <p className="mt-3 whitespace-pre-wrap text-sm">{lead.summary || lead.message}</p>
-      {lead.promoMessage && <p className="mt-2 text-sm text-teal-deep">{lead.promoMessage}</p>}
+      {lead.promoMessage && <p className="mt-2 text-sm text-brand">{lead.promoMessage}</p>}
       <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold">
-        {lead.phone && <a className="text-teal-deep" href={`tel:${lead.phone}`}>Call</a>}
-        {lead.phone && <a className="text-teal-deep" href={waLink(lead.phone, `Hi ${lead.name}, it's Spotless NT about ${lead.reference}.`)}>WhatsApp</a>}
-        {lead.email && <a className="text-teal-deep" href={`mailto:${lead.email}`}>Email</a>}
+        {lead.phone && <a className="text-brand" href={`tel:${lead.phone}`}>Call</a>}
+        {lead.phone && <a className="text-brand" href={waLink(lead.phone, `Hi ${lead.name}, it's Spotless NT about ${lead.reference}.`)}>WhatsApp</a>}
+        {lead.email && <a className="text-brand" href={`mailto:${lead.email}`}>Email</a>}
       </div>
       <label className="mt-3 block text-sm font-semibold" htmlFor={`notes-${lead.id}`}>Internal notes</label>
-      <textarea id={`notes-${lead.id}`} className="mt-1 min-h-20 w-full rounded-input border border-[#c5dde2] px-3 py-2" value={notes} onChange={(event) => setNotes(event.target.value)} onBlur={() => start(async () => { await updateLeadAction(lead.id, { internalNotes: notes }); router.refresh(); })} />
+      <textarea id={`notes-${lead.id}`} className="mt-1 min-h-20 w-full rounded-input border border-line px-3 py-2" value={notes} onChange={(event) => setNotes(event.target.value)} onBlur={() => start(async () => { await updateLeadAction(lead.id, { internalNotes: notes }); router.refresh(); })} />
       <div className="mt-3">
         <ConfirmDialog title="Delete this lead?" body="This removes the record from the admin list." confirmLabel="Delete lead" onConfirm={() => start(async () => { await deleteLeadAction(lead.id); toast("Lead deleted"); router.refresh(); })} trigger={<Button type="button" variant="danger" size="sm">Delete</Button>} />
       </div>
@@ -116,11 +116,11 @@ function BookingCard({ booking }: { booking: Booking }) {
       <p className="mt-3 whitespace-pre-wrap text-sm">{booking.summary}</p>
       <p className="mt-2 text-sm">{booking.address}</p>
       <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold">
-        <a className="text-teal-deep" href={`tel:${booking.phone}`}>Call</a>
-        <a className="text-teal-deep" href={waLink(booking.phone, `Hi ${booking.name}, it's Spotless NT about ${booking.reference}.`)}>WhatsApp</a>
+        <a className="text-brand" href={`tel:${booking.phone}`}>Call</a>
+        <a className="text-brand" href={waLink(booking.phone, `Hi ${booking.name}, it's Spotless NT about ${booking.reference}.`)}>WhatsApp</a>
       </div>
       <label className="mt-3 block text-sm font-semibold" htmlFor={`bnotes-${booking.id}`}>Internal notes</label>
-      <textarea id={`bnotes-${booking.id}`} className="mt-1 min-h-20 w-full rounded-input border border-[#c5dde2] px-3 py-2" value={notes} onChange={(event) => setNotes(event.target.value)} onBlur={() => start(async () => { await updateBookingAction(booking.id, { internalNotes: notes }); router.refresh(); })} />
+      <textarea id={`bnotes-${booking.id}`} className="mt-1 min-h-20 w-full rounded-input border border-line px-3 py-2" value={notes} onChange={(event) => setNotes(event.target.value)} onBlur={() => start(async () => { await updateBookingAction(booking.id, { internalNotes: notes }); router.refresh(); })} />
       <div className="mt-3">
         <ConfirmDialog title="Delete this booking?" body="This removes the request. It does not email the customer." confirmLabel="Delete booking" onConfirm={() => start(async () => { await deleteBookingAction(booking.id); toast("Booking deleted"); router.refresh(); })} trigger={<Button type="button" variant="danger" size="sm">Delete</Button>} />
       </div>
@@ -151,7 +151,7 @@ function BlockedDates({ blocked }: { blocked: BlockedDate[] }) {
         {blocked.map((item) => (
           <li key={item.id} className="flex items-center justify-between gap-3 text-sm">
             <span>{item.date} {item.reason && `· ${item.reason}`}</span>
-            <button type="button" className="font-semibold text-[#9e2a2a]" onClick={async () => { await deleteBlockedDateAction(item.id); router.refresh(); }}>Remove</button>
+            <button type="button" className="font-semibold text-danger" onClick={async () => { await deleteBlockedDateAction(item.id); router.refresh(); }}>Remove</button>
           </li>
         ))}
       </ul>
