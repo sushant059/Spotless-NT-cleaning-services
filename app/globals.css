@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #eaf8fa;
+  color: #17343c;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+@media (min-width: 768px) {
+  body {
+    font-size: 17px;
+  }
+}
+
+::selection {
+  background: #7ed9c6;
+  color: #17343c;
+}
+
+:focus-visible {
+  outline: 3px solid #09808f;
+  outline-offset: 3px;
+}
+
+@keyframes shine {
+  0% { transform: translateX(-130%); }
+  100% { transform: translateX(230%); }
+}
+
+.shine-bar {
+  animation: shine 3.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

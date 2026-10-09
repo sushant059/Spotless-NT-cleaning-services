@@ -1,0 +1,522 @@
+import { mkdir, readFile, writeFile } from "fs/promises";
+import path from "path";
+import { cache } from "react";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { seedDatabase } from "@/lib/seed";
+import type {
+  BlockedDate,
+  Booking,
+  Database,
+  Faq,
+  Lead,
+  MediaItem,
+  Offer,
+  Promo,
+  ResultPair,
+  Review,
+  Service,
+  Settings,
+} from "@/lib/types";
+
+const filePath = path.join(process.cwd(), "data", "db.json");
+let chain: Promise<unknown> = Promise.resolve();
+let supabaseDown = false;
+
+export function supabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+}
+
+export function supabaseAnon() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+}
+
+export function usingSupabase() {
+  return Boolean(supabaseAdmin()) && !supabaseDown;
+}
+
+async function readFileDb(): Promise<Database> {
+  try {
+    const raw = await readFile(filePath, "utf8");
+    const parsed = JSON.parse(raw) as Database;
+    if (!parsed?.settings || !parsed.services) return seedDatabase();
+    return parsed;
+  } catch {
+    const seeded = seedDatabase();
+    await writeFileDb(seeded);
+    return seeded;
+  }
+}
+
+async function writeFileDb(db: Database) {
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await writeFile(filePath, JSON.stringify(db, null, 2));
+}
+
+async function loadSupabaseSeeded(sb: SupabaseClient): Promise<Database> {
+  return loadSupabase(sb, true);
+}
+
+function asArray<T>(value: unknown, fallback: T[] = []): T[] {
+  return Array.isArray(value) ? (value as T[]) : fallback;
+}
+
+function mapSettings(row: Record<string, unknown>): Settings {
+  return {
+    businessName: String(row.business_name ?? ""),
+    shortName: String(row.short_name ?? ""),
+    phoneDisplay: String(row.phone_display ?? ""),
+    phoneTel: String(row.phone_tel ?? ""),
+    whatsappUrl: String(row.whatsapp_url ?? ""),
+    email: String(row.email ?? ""),
+    notificationEmail: String(row.notification_email ?? ""),
+    address: String(row.address ?? ""),
+    serviceAreas: asArray<string>(row.service_areas),
+    facebook: String(row.facebook ?? ""),
+    instagram: String(row.instagram ?? ""),
+    tiktok: String(row.tiktok ?? ""),
+    google: String(row.google_url ?? ""),
+    abn: String(row.abn ?? ""),
+    licence: String(row.licence ?? ""),
+    insurance: String(row.insurance ?? ""),
+    openingHours: asArray(row.opening_hours),
+    seoTitle: String(row.seo_title ?? ""),
+    seoDescription: String(row.seo_description ?? ""),
+    heroHeadline: String(row.hero_headline ?? ""),
+    heroSubtext: String(row.hero_subtext ?? ""),
+    heroImage: String(row.hero_image ?? ""),
+    heroVideo: String(row.hero_video ?? ""),
+    teamPhoto: String(row.team_photo ?? ""),
+    ogImage: String(row.og_image ?? ""),
+    stats: asArray(row.stats),
+  };
+}
+
+function settingsRow(settings: Settings) {
+  return {
+    id: 1,
+    business_name: settings.businessName,
+    short_name: settings.shortName,
+    phone_display: settings.phoneDisplay,
+    phone_tel: settings.phoneTel,
+    whatsapp_url: settings.whatsappUrl,
+    email: settings.email,
+    notification_email: settings.notificationEmail,
+    address: settings.address,
+    service_areas: settings.serviceAreas,
+    facebook: settings.facebook,
+    instagram: settings.instagram,
+    tiktok: settings.tiktok,
+    google_url: settings.google,
+    abn: settings.abn,
+    licence: settings.licence,
+    insurance: settings.insurance,
+    opening_hours: settings.openingHours,
+    seo_title: settings.seoTitle,
+    seo_description: settings.seoDescription,
+    hero_headline: settings.heroHeadline,
+    hero_subtext: settings.heroSubtext,
+    hero_image: settings.heroImage,
+    hero_video: settings.heroVideo,
+    team_photo: settings.teamPhoto,
+    og_image: settings.ogImage,
+    stats: settings.stats,
+  };
+}
+
+function mapService(row: Record<string, unknown>): Service {
+  return {
+    id: String(row.id),
+    slug: String(row.slug),
+    title: String(row.title),
+    summary: String(row.summary ?? ""),
+    description: String(row.description ?? ""),
+    included: asArray<string>(row.included),
+    bestFor: asArray<string>(row.best_for),
+    process: asArray(row.process),
+    faqs: asArray(row.faqs),
+    icon: (row.icon as Service["icon"]) || "layers",
+    image: String(row.image ?? ""),
+    videoUrl: String(row.video_url ?? ""),
+    order: Number(row.sort_order ?? 0),
+    visible: Boolean(row.visible),
+    related: asArray<string>(row.related),
+  };
+}
+
+function serviceRow(service: Service) {
+  return {
+    id: service.id,
+    slug: service.slug,
+    title: service.title,
+    summary: service.summary,
+    description: service.description,
+    included: service.included,
+    best_for: service.bestFor,
+    process: service.process,
+    faqs: service.faqs,
+    icon: service.icon,
+    image: service.image,
+    video_url: service.videoUrl,
+    sort_order: service.order,
+    visible: service.visible,
+    related: service.related,
+  };
+}
+
+async function expect<T>(result: { data: T; error: { message: string } | null }) {
+  if (result.error) throw new Error(result.error.message);
+  return result.data;
+}
+
+async function loadSupabase(sb: SupabaseClient, seedIfEmpty: boolean): Promise<Database> {
+  const settingsRows = await expect(await sb.from("site_settings").select("*").eq("id", 1).maybeSingle());
+  if (!settingsRows) {
+    if (!seedIfEmpty) throw new Error("Supabase settings could not be seeded.");
+    await saveSupabase(sb, seedDatabase());
+    return loadSupabase(sb, false);
+  }
+  const [services, offers, promos, leads, bookings, results, reviews, faqs, blocked, media] = await Promise.all([
+    expect(await sb.from("services").select("*")),
+    expect(await sb.from("offers").select("*")),
+    expect(await sb.from("promo_codes").select("*")),
+    expect(await sb.from("leads").select("*").order("created_at", { ascending: false })),
+    expect(await sb.from("bookings").select("*").order("created_at", { ascending: false })),
+    expect(await sb.from("before_after").select("*")),
+    expect(await sb.from("reviews").select("*")),
+    expect(await sb.from("faqs").select("*")),
+    expect(await sb.from("blocked_dates").select("*")),
+    expect(await sb.from("media").select("*")),
+  ]);
+  return {
+    version: 1,
+    settings: mapSettings(settingsRows as Record<string, unknown>),
+    services: (services as Record<string, unknown>[]).map(mapService),
+    offers: (offers as Record<string, unknown>[]).map((row) => ({
+      id: String(row.id),
+      title: String(row.title),
+      description: String(row.description ?? ""),
+      bannerText: String(row.banner_text ?? ""),
+      href: String(row.href ?? ""),
+      image: String(row.image ?? ""),
+      active: Boolean(row.active),
+      startsAt: String(row.starts_at ?? ""),
+      endsAt: String(row.ends_at ?? ""),
+      showOnBanner: Boolean(row.show_on_banner),
+      order: Number(row.sort_order ?? 0),
+    })),
+    promos: (promos as Record<string, unknown>[]).map((row) => ({
+      id: String(row.id),
+      code: String(row.code),
+      type: row.discount_type === "fixed" ? "fixed" : "percent",
+      amount: Number(row.amount ?? 0),
+      message: String(row.message ?? ""),
+      expiresAt: String(row.expires_at ?? ""),
+      usageLimit: row.usage_limit == null ? null : Number(row.usage_limit),
+      usedCount: Number(row.used_count ?? 0),
+      active: Boolean(row.active),
+    })),
+    leads: (leads as Record<string, unknown>[]).map(mapLead),
+    bookings: (bookings as Record<string, unknown>[]).map(mapBooking),
+    results: (results as Record<string, unknown>[]).map((row) => ({
+      id: String(row.id),
+      serviceSlug: String(row.service_slug),
+      caption: String(row.caption ?? ""),
+      scene: String(row.scene ?? "carpet"),
+      beforeImage: String(row.before_image ?? ""),
+      afterImage: String(row.after_image ?? ""),
+      illustrative: Boolean(row.illustrative),
+      order: Number(row.sort_order ?? 0),
+    })),
+    reviews: (reviews as Record<string, unknown>[]).map((row) => ({
+      id: String(row.id),
+      name: String(row.name),
+      text: String(row.body ?? ""),
+      service: String(row.service ?? ""),
+      rating: Number(row.rating ?? 5),
+      date: String(row.review_date ?? ""),
+      source: (row.source as Review["source"]) || "manual",
+      visible: Boolean(row.visible),
+      order: Number(row.sort_order ?? 0),
+    })),
+    faqs: (faqs as Record<string, unknown>[]).map((row) => ({
+      id: String(row.id),
+      category: String(row.category),
+      question: String(row.question),
+      answer: String(row.answer),
+      order: Number(row.sort_order ?? 0),
+    })),
+    blockedDates: (blocked as Record<string, unknown>[]).map((row) => ({
+      id: String(row.id),
+      date: String(row.blocked_on),
+      reason: String(row.reason ?? ""),
+    })),
+    media: (media as Record<string, unknown>[]).map((row) => ({
+      id: String(row.id),
+      name: String(row.name),
+      url: String(row.url),
+      kind: row.kind === "video" ? "video" : "image",
+      slot: String(row.slot ?? ""),
+      createdAt: String(row.created_at),
+    })),
+  };
+}
+
+function mapLead(row: Record<string, unknown>): Lead {
+  return {
+    id: String(row.id),
+    reference: String(row.reference),
+    source: (row.source as Lead["source"]) || "quote",
+    status: (row.status as Lead["status"]) || "new",
+    name: String(row.name ?? ""),
+    phone: String(row.phone ?? ""),
+    email: String(row.email ?? ""),
+    suburb: String(row.suburb ?? ""),
+    services: asArray<string>(row.services),
+    details: (row.details as Lead["details"]) || {},
+    summary: String(row.summary ?? ""),
+    notes: String(row.notes ?? ""),
+    internalNotes: String(row.internal_notes ?? ""),
+    promoCode: String(row.promo_code ?? ""),
+    promoMessage: String(row.promo_message ?? ""),
+    photos: asArray<string>(row.photos),
+    message: String(row.message ?? ""),
+    preferredTime: String(row.preferred_time ?? ""),
+    createdAt: String(row.created_at),
+  };
+}
+
+function leadRow(lead: Lead) {
+  return {
+    id: lead.id,
+    reference: lead.reference,
+    source: lead.source,
+    status: lead.status,
+    name: lead.name,
+    phone: lead.phone,
+    email: lead.email,
+    suburb: lead.suburb,
+    services: lead.services,
+    details: lead.details,
+    summary: lead.summary,
+    notes: lead.notes,
+    internal_notes: lead.internalNotes,
+    promo_code: lead.promoCode,
+    promo_message: lead.promoMessage,
+    photos: lead.photos,
+    message: lead.message,
+    preferred_time: lead.preferredTime,
+    created_at: lead.createdAt,
+  };
+}
+
+function mapBooking(row: Record<string, unknown>): Booking {
+  return {
+    id: String(row.id),
+    reference: String(row.reference),
+    status: (row.status as Booking["status"]) || "new",
+    name: String(row.name ?? ""),
+    phone: String(row.phone ?? ""),
+    email: String(row.email ?? ""),
+    services: asArray<string>(row.services),
+    details: (row.details as Booking["details"]) || {},
+    summary: String(row.summary ?? ""),
+    date: String(row.appointment_date ?? ""),
+    timeWindow: String(row.time_window ?? ""),
+    address: String(row.address ?? ""),
+    suburb: String(row.suburb ?? ""),
+    notes: String(row.notes ?? ""),
+    internalNotes: String(row.internal_notes ?? ""),
+    createdAt: String(row.created_at),
+  };
+}
+
+function bookingRow(booking: Booking) {
+  return {
+    id: booking.id,
+    reference: booking.reference,
+    status: booking.status,
+    name: booking.name,
+    phone: booking.phone,
+    email: booking.email,
+    services: booking.services,
+    details: booking.details,
+    summary: booking.summary,
+    appointment_date: booking.date,
+    time_window: booking.timeWindow,
+    address: booking.address,
+    suburb: booking.suburb,
+    notes: booking.notes,
+    internal_notes: booking.internalNotes,
+    created_at: booking.createdAt,
+  };
+}
+
+async function replaceRows(sb: SupabaseClient, table: string, rows: Record<string, unknown>[]) {
+  const deleted = await sb.from(table).delete().not("id", "is", null);
+  if (deleted.error) throw new Error(deleted.error.message);
+  if (!rows.length) return;
+  const inserted = await sb.from(table).insert(rows);
+  if (inserted.error) throw new Error(inserted.error.message);
+}
+
+async function saveSupabase(sb: SupabaseClient, db: Database) {
+  const settings = await sb.from("site_settings").upsert(settingsRow(db.settings));
+  if (settings.error) throw new Error(settings.error.message);
+  await replaceRows(sb, "services", db.services.map(serviceRow));
+  await replaceRows(
+    sb,
+    "offers",
+    db.offers.map((offer) => ({
+      id: offer.id,
+      title: offer.title,
+      description: offer.description,
+      banner_text: offer.bannerText,
+      href: offer.href,
+      image: offer.image,
+      active: offer.active,
+      starts_at: offer.startsAt || null,
+      ends_at: offer.endsAt || null,
+      show_on_banner: offer.showOnBanner,
+      sort_order: offer.order,
+    })),
+  );
+  await replaceRows(
+    sb,
+    "promo_codes",
+    db.promos.map((promo) => ({
+      id: promo.id,
+      code: promo.code,
+      discount_type: promo.type,
+      amount: promo.amount,
+      message: promo.message,
+      expires_at: promo.expiresAt || null,
+      usage_limit: promo.usageLimit,
+      used_count: promo.usedCount,
+      active: promo.active,
+    })),
+  );
+  await replaceRows(sb, "leads", db.leads.map(leadRow));
+  await replaceRows(sb, "bookings", db.bookings.map(bookingRow));
+  await replaceRows(
+    sb,
+    "before_after",
+    db.results.map((item) => ({
+      id: item.id,
+      service_slug: item.serviceSlug,
+      caption: item.caption,
+      scene: item.scene,
+      before_image: item.beforeImage,
+      after_image: item.afterImage,
+      illustrative: item.illustrative,
+      sort_order: item.order,
+    })),
+  );
+  await replaceRows(
+    sb,
+    "reviews",
+    db.reviews.map((review) => ({
+      id: review.id,
+      name: review.name,
+      body: review.text,
+      service: review.service,
+      rating: review.rating,
+      review_date: review.date || null,
+      source: review.source,
+      visible: review.visible,
+      sort_order: review.order,
+    })),
+  );
+  await replaceRows(
+    sb,
+    "faqs",
+    db.faqs.map((faq) => ({
+      id: faq.id,
+      category: faq.category,
+      question: faq.question,
+      answer: faq.answer,
+      sort_order: faq.order,
+    })),
+  );
+  await replaceRows(
+    sb,
+    "blocked_dates",
+    db.blockedDates.map((item) => ({ id: item.id, blocked_on: item.date, reason: item.reason })),
+  );
+  await replaceRows(
+    sb,
+    "media",
+    db.media.map((item) => ({
+      id: item.id,
+      name: item.name,
+      url: item.url,
+      kind: item.kind,
+      slot: item.slot,
+      created_at: item.createdAt,
+    })),
+  );
+}
+
+async function loadUncached(): Promise<Database> {
+  const sb = supabaseAdmin();
+  if (sb && !supabaseDown) {
+    try {
+      return await loadSupabaseSeeded(sb);
+    } catch (error) {
+      console.error("Supabase read failed, using local data.", error);
+      supabaseDown = true;
+    }
+  }
+  return readFileDb();
+}
+
+export const getDb = cache(loadUncached);
+
+export async function updateDb(fn: (db: Database) => void) {
+  const run = chain.then(async () => {
+    const sb = supabaseAdmin();
+    if (sb && !supabaseDown) {
+      try {
+        const db = await loadSupabase(sb, true);
+        fn(db);
+        await saveSupabase(sb, db);
+        return db;
+      } catch (error) {
+        console.error("Supabase write failed, using local data.", error);
+        supabaseDown = true;
+      }
+    }
+    const db = await readFileDb();
+    fn(db);
+    await writeFileDb(db);
+    return db;
+  });
+  chain = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+export async function storeMediaFile(file: File) {
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const safe = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/^-+|-+$/g, "") || "file";
+  const key = `${Date.now()}-${safe}`;
+  const sb = supabaseAdmin();
+  if (sb && !supabaseDown) {
+    const uploaded = await sb.storage.from("media").upload(key, bytes, { contentType: file.type, upsert: false });
+    if (uploaded.error) throw new Error(uploaded.error.message);
+    return sb.storage.from("media").getPublicUrl(key).data.publicUrl;
+  }
+  const dir = path.join(process.cwd(), "public", "uploads");
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, key), bytes);
+  return `/uploads/${key}`;
+}
+
+export type { BlockedDate, Booking, Faq, Lead, MediaItem, Offer, Promo, ResultPair, Review, Service, Settings };
