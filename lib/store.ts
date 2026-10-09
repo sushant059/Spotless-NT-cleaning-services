@@ -20,7 +20,9 @@ import type {
   Settings,
 } from "@/lib/types";
 
-const filePath = path.join(process.cwd(), "data", "db.json");
+// Hosts like Vercel only allow writing to /tmp. Without Supabase the site still works there
+// for previewing, but saved data resets whenever the server restarts.
+const filePath = process.env.VERCEL ? path.join("/tmp", "spotless-nt-db.json") : path.join(process.cwd(), "data", "db.json");
 let chain: Promise<unknown> = Promise.resolve();
 let supabaseDown = false;
 
@@ -592,6 +594,7 @@ export async function storeMediaFile(file: File) {
     if (uploaded.error) throw new Error(uploaded.error.message);
     return sb.storage.from("media").getPublicUrl(key).data.publicUrl;
   }
+  if (process.env.VERCEL) throw new Error("Connect Supabase to upload photos and videos on the live site.");
   const dir = path.join(process.cwd(), "public", "uploads");
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, key), bytes);

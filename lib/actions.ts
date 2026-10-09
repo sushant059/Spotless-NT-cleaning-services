@@ -67,7 +67,12 @@ async function savePhotos(files: File[]) {
   const saved: string[] = [];
   for (const file of files.slice(0, 5)) {
     if (!IMAGE_TYPES.has(file.type) || file.size > 4_000_000) continue;
-    saved.push(await storeMediaFile(file));
+    try {
+      saved.push(await storeMediaFile(file));
+    } catch (error) {
+      // A failed photo shouldn't lose the customer's quote request.
+      console.error("Quote photo upload failed", error);
+    }
   }
   return saved;
 }
@@ -682,7 +687,12 @@ export async function uploadMediaAction(formData: FormData): Promise<ActionResul
   if (!isImage && !isVideo) return { ok: false, error: "Use a JPG, PNG, WEBP, GIF, MP4 or WEBM file." };
   if (isImage && file.size > 8_000_000) return { ok: false, error: "Images need to be under 8MB." };
   if (isVideo && file.size > 40_000_000) return { ok: false, error: "Videos need to be under 40MB." };
-  const url = await storeMediaFile(file);
+  let url: string;
+  try {
+    url = await storeMediaFile(file);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Upload failed." };
+  }
   await updateDb((db) => {
     db.media.unshift({ id: uid("media"), name: file.name, url, kind: isVideo ? "video" : "image", slot, createdAt: new Date().toISOString() });
     assignSlot(db, url, slot);
