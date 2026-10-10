@@ -263,6 +263,7 @@ function JobCard({ job }: { job: Job }) {
         <Label htmlFor={`note-${job.id}`}>Update the job</Label>
         <Textarea id={`note-${job.id}`} className="min-h-16" value={note} placeholder="Optional note, e.g. “Customer says stain came back in hallway”" onChange={(event) => setNote(event.target.value)} />
         <div className="mt-2 flex flex-wrap gap-2">
+          {job.status === "requested" && <Button type="button" size="sm" disabled={pending} onClick={() => move("scheduled", "Confirmed with customer")}>Confirm job</Button>}
           {job.status !== "in-progress" && <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => move("in-progress")}>Start job</Button>}
           {job.status !== "done" && <Button type="button" size="sm" disabled={pending} onClick={() => move("done")}>Mark done</Button>}
           <Button type="button" size="sm" variant="danger" disabled={pending} onClick={() => (note.trim() ? move("complaint") : toast("Write what the customer complained about first.", "error"))}>Log complaint</Button>

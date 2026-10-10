@@ -17,6 +17,8 @@ export function sheetsEnabled() {
 
 const statusLabel = (status: string) => JOB_STATUSES.find((item) => item.id === status)?.label ?? status;
 const list = (items: string[]) => items.filter(Boolean).join("\n");
+/** "0401 647 545" stays text in Google Sheets, so the leading 0 isn't dropped. */
+const phoneText = (phone: string) => (/^0\d{9}$/.test(phone) ? `${phone.slice(0, 4)} ${phone.slice(4, 7)} ${phone.slice(7)}` : phone);
 
 export function customerSheetRow(customer: Customer, jobs: Job[]): SheetRow {
   const theirs = jobs.filter((job) => job.customerId === customer.id);
@@ -25,7 +27,7 @@ export function customerSheetRow(customer: Customer, jobs: Job[]): SheetRow {
     Type: customer.type === "company" ? "Company" : "Person",
     Name: customer.name,
     Company: customer.companyName,
-    Phone: customer.phone,
+    Phone: phoneText(customer.phone),
     Email: customer.email,
     Address: customer.address,
     Suburb: customer.suburb,
@@ -44,7 +46,7 @@ export function jobSheetRow(job: Job, customers: Customer[]): SheetRow {
     ID: job.id,
     Reference: job.reference,
     Customer: customer ? customer.companyName || customer.name : "",
-    Phone: customer?.phone ?? "",
+    Phone: phoneText(customer?.phone ?? ""),
     Services: job.services,
     Address: job.address,
     "Scheduled date": job.scheduledDate,
@@ -69,7 +71,7 @@ export function leadSheetRow(lead: Lead): SheetRow {
     Source: lead.source,
     Status: lead.status,
     Name: lead.name,
-    Phone: lead.phone,
+    Phone: phoneText(lead.phone),
     Email: lead.email,
     Suburb: lead.suburb,
     Details: lead.summary,
@@ -88,7 +90,7 @@ export function bookingSheetRow(booking: Booking): SheetRow {
     Reference: booking.reference,
     Status: booking.status,
     Name: booking.name,
-    Phone: booking.phone,
+    Phone: phoneText(booking.phone),
     Email: booking.email,
     Date: booking.date,
     "Time window": timeWindowLabel(booking.timeWindow),

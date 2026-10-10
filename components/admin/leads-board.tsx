@@ -91,7 +91,7 @@ function LeadCard({ lead }: { lead: Lead }) {
           const result = await convertToCustomerAction("lead", lead.id);
           toast(result.ok ? result.message || "Created" : result.error, result.ok ? "ok" : "error");
           if (result.ok && result.id) router.push(`/admin/customers/${result.id}`);
-        })}>Make customer & job</Button>
+        })}>Confirm job & open customer</Button>
         <ConfirmDialog title="Delete this lead?" body="This removes the record from the admin list." confirmLabel="Delete lead" onConfirm={() => start(async () => { await deleteLeadAction(lead.id); toast("Lead deleted"); router.refresh(); })} trigger={<Button type="button" variant="danger" size="sm">Delete</Button>} />
       </div>
     </article>
@@ -132,7 +132,7 @@ function BookingCard({ booking }: { booking: Booking }) {
           const result = await convertToCustomerAction("booking", booking.id);
           toast(result.ok ? result.message || "Created" : result.error, result.ok ? "ok" : "error");
           if (result.ok && result.id) router.push(`/admin/customers/${result.id}`);
-        })}>Make customer & job</Button>
+        })}>Confirm job & open customer</Button>
         <ConfirmDialog title="Delete this booking?" body="This removes the request. It does not email the customer." confirmLabel="Delete booking" onConfirm={() => start(async () => { await deleteBookingAction(booking.id); toast("Booking deleted"); router.refresh(); })} trigger={<Button type="button" variant="danger" size="sm">Delete</Button>} />
       </div>
     </article>

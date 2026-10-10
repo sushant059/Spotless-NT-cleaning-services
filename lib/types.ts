@@ -197,7 +197,7 @@ export type Customer = {
   updatedAt: string;
 };
 
-export type JobStatus = "scheduled" | "in-progress" | "done" | "complaint" | "redo" | "cancelled";
+export type JobStatus = "requested" | "scheduled" | "in-progress" | "done" | "complaint" | "redo" | "cancelled";
 
 export type JobEvent = { at: string; status: JobStatus; note: string };
 

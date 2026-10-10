@@ -12,6 +12,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { seedDatabase } from "@/lib/seed";
 import { getDb, storeMediaFile, supabaseAnon, updateDb, usingSupabase } from "@/lib/store";
 import type { ActionResult, Booking, Customer, Database, DetailValue, Faq, Job, Lead, Offer, Promo, ResultPair, Review, Service, Settings } from "@/lib/types";
+import { cancelRequestFor, linkEnquiry } from "@/lib/crm";
 import { dayAvailability, isSlotFull, slotOccupants } from "@/lib/schedule";
 import { bookingSheetRow, customerSheetRow, jobSheetRow, leadSheetRow, sheetsEnabled, syncEverything, syncSheet } from "@/lib/sheets";
 import { byOrder, darwinISODate, escapeHtml, slugify, uid, uniqueReference } from "@/lib/utils";
@@ -186,6 +187,7 @@ export async function submitQuote(formData: FormData): Promise<ActionResult> {
   const photos = await savePhotos(formData.getAll("photos").filter((item): item is File => item instanceof File));
   const phone = normalizeAuPhone(parsed.data.phone) || parsed.data.phone;
   let reference = "";
+  let linked = { customerId: "", jobId: "" };
   let promoMessage = "";
   let emailed = false;
   const settings = db.settings;
@@ -216,6 +218,7 @@ export async function submitQuote(formData: FormData): Promise<ActionResult> {
       createdAt: new Date().toISOString(),
     };
     next.leads.unshift(lead);
+    linked = linkEnquiry(next, "lead", lead);
   });
   emailed = await notify(settings, {
     kind: "quote",
@@ -229,6 +232,7 @@ export async function submitQuote(formData: FormData): Promise<ActionResult> {
     extra: photos.length ? `${photos.length} photo${photos.length === 1 ? "" : "s"} attached in admin.` : "",
   }, { email: parsed.data.email, name: parsed.data.name, kind: "quote request", reference });
   await syncLeadSheet(saved, reference);
+  await syncCustomerSheets(saved, [linked.customerId], [linked.jobId]);
   refresh();
   return { ok: true, reference, emailed, message: promoMessage };
 }
@@ -302,6 +306,7 @@ export async function submitChat(input: unknown): Promise<ActionResult> {
   if (!services.length) return { ok: false, error: "Choose at least one service." };
   const phone = normalizeAuPhone(parsed.data.phone) || parsed.data.phone;
   let reference = "";
+  let linked = { customerId: "", jobId: "" };
   let promoMessage = "";
   const saved = await updateDb((next) => {
     reference = uniqueReference([...next.leads.map((lead) => lead.reference), ...next.bookings.map((item) => item.reference)]);
@@ -329,6 +334,7 @@ export async function submitChat(input: unknown): Promise<ActionResult> {
       preferredTime: parsed.data.preferredTime,
       createdAt: new Date().toISOString(),
     });
+    linked = linkEnquiry(next, "lead", next.leads[0]);
   });
   await notify(db.settings, {
     kind: "chat callback",
@@ -342,6 +348,7 @@ export async function submitChat(input: unknown): Promise<ActionResult> {
     extra: parsed.data.preferredTime ? `Preferred time: ${parsed.data.preferredTime}` : "",
   });
   await syncLeadSheet(saved, reference);
+  await syncCustomerSheets(saved, [linked.customerId], [linked.jobId]);
   refresh();
   return { ok: true, reference, message: promoMessage };
 }
@@ -370,6 +377,7 @@ export async function submitBooking(input: unknown): Promise<ActionResult> {
   let reference = "";
   let promoMessage = "";
   let slotTaken = false;
+  let linked = { customerId: "", jobId: "" };
   const saved = await updateDb((next) => {
     // Checked inside the save so two people can't grab the same slot at the same moment.
     if (isSlotFull(next, parsed.data.date, parsed.data.timeWindow)) {
@@ -400,6 +408,7 @@ export async function submitBooking(input: unknown): Promise<ActionResult> {
       createdAt: new Date().toISOString(),
     };
     next.bookings.unshift(booking);
+    linked = linkEnquiry(next, "booking", booking);
   });
   if (slotTaken) {
     return { ok: false, error: "Sorry, that time has just been booked. Please choose another time.", fields: { timeWindow: "That time is already booked." } };
@@ -416,6 +425,7 @@ export async function submitBooking(input: unknown): Promise<ActionResult> {
     extra: `${parsed.data.date} · ${timeWindowLabel(parsed.data.timeWindow)} · ${parsed.data.address}`,
   }, { email: parsed.data.email, name: parsed.data.name, kind: "booking request", reference });
   await syncBookingSheet(saved, reference);
+  await syncCustomerSheets(saved, [linked.customerId], [linked.jobId]);
   refresh();
   return { ok: true, reference, emailed, message: promoMessage };
 }
@@ -553,14 +563,17 @@ export async function deletePromoAction(id: string): Promise<ActionResult> {
 export async function updateLeadAction(id: string, patch: { status?: Lead["status"]; internalNotes?: string }): Promise<ActionResult> {
   const auth = await guard();
   if (!auth.ok) return auth;
+  let cancelledJobId = "";
   const saved = await updateDb((db) => {
     const lead = db.leads.find((item) => item.id === id);
     if (!lead) return;
     if (patch.status) lead.status = patch.status;
+    if (patch.status === "lost") cancelledJobId = cancelRequestFor(db, lead.reference)?.id ?? "";
     if (patch.internalNotes !== undefined) lead.internalNotes = patch.internalNotes.slice(0, 2000);
   });
   const lead = saved.leads.find((item) => item.id === id);
   if (lead && sheetsEnabled()) await syncSheet("Leads", [leadSheetRow(lead)]);
+  if (cancelledJobId) await syncCustomerSheets(saved, [], [cancelledJobId]);
   refresh();
   return { ok: true };
 }
@@ -577,14 +590,17 @@ export async function deleteLeadAction(id: string): Promise<ActionResult> {
 export async function updateBookingAction(id: string, patch: { status?: Booking["status"]; internalNotes?: string }): Promise<ActionResult> {
   const auth = await guard();
   if (!auth.ok) return auth;
+  let cancelledJobId = "";
   const saved = await updateDb((db) => {
     const booking = db.bookings.find((item) => item.id === id);
     if (!booking) return;
     if (patch.status) booking.status = patch.status;
+    if (patch.status === "lost") cancelledJobId = cancelRequestFor(db, booking.reference)?.id ?? "";
     if (patch.internalNotes !== undefined) booking.internalNotes = patch.internalNotes.slice(0, 2000);
   });
   const booking = saved.bookings.find((item) => item.id === id);
   if (booking && sheetsEnabled()) await syncSheet("Bookings", [bookingSheetRow(booking)]);
+  if (cancelledJobId) await syncCustomerSheets(saved, [], [cancelledJobId]);
   refresh();
   return { ok: true };
 }
@@ -914,7 +930,7 @@ export async function deleteCustomerAction(id: string): Promise<ActionResult> {
   return { ok: true, message: "Customer and their jobs deleted." };
 }
 
-const JOB_STATUS_IDS = ["scheduled", "in-progress", "done", "complaint", "redo", "cancelled"] as const;
+const JOB_STATUS_IDS = ["requested", "scheduled", "in-progress", "done", "complaint", "redo", "cancelled"] as const;
 
 export async function saveJobAction(job: Job, note = ""): Promise<ActionResult & { id?: string }> {
   const auth = await guard();
@@ -982,76 +998,35 @@ export async function deleteJobAction(id: string): Promise<ActionResult> {
 }
 
 /** Turns a website enquiry or booking into a customer (matched by phone) and a scheduled job. */
+/** Opens (and if needed creates) the customer and job for a website enquiry, and confirms a new request. */
 export async function convertToCustomerAction(kind: "lead" | "booking", id: string): Promise<ActionResult & { id?: string }> {
   const auth = await guard();
   if (!auth.ok) return auth;
-  let customerId = "";
-  let jobId = "";
+  let linked = { customerId: "", jobId: "", created: false };
   let found = true;
   const saved = await updateDb((db) => {
-    const lead = kind === "lead" ? db.leads.find((item) => item.id === id) : undefined;
-    const booking = kind === "booking" ? db.bookings.find((item) => item.id === id) : undefined;
-    const source = lead ?? booking;
+    const source = kind === "lead" ? db.leads.find((item) => item.id === id) : db.bookings.find((item) => item.id === id);
     if (!source) {
       found = false;
       return;
     }
-    const phone = normalizeAuPhone(source.phone) || source.phone;
-    const existing = phone ? db.customers.find((item) => (normalizeAuPhone(item.phone) || item.phone) === phone) : undefined;
-    const address = booking ? `${booking.address}, ${booking.suburb}` : lead?.suburb ?? "";
-    if (existing) {
-      customerId = existing.id;
-      if (!existing.email && source.email) existing.email = source.email;
-      if (!existing.address && address) existing.address = address;
-      existing.updatedAt = nowIso();
-    } else {
-      customerId = uid("cust");
-      db.customers.unshift({
-        id: customerId,
-        type: "person",
-        name: source.name,
-        companyName: "",
-        phone,
-        email: source.email,
-        address,
-        suburb: booking?.suburb ?? lead?.suburb ?? "",
-        notes: "",
-        marketingOptIn: false,
-        createdAt: nowIso(),
-        updatedAt: nowIso(),
-      });
+    linked = linkEnquiry(db, kind, source);
+    const job = db.jobs.find((item) => item.id === linked.jobId);
+    if (job && job.status === "requested") {
+      job.status = "scheduled";
+      job.updatedAt = new Date().toISOString();
+      job.history.push({ at: job.updatedAt, status: "scheduled", note: "Confirmed from Leads & bookings" });
     }
-    jobId = uid("job");
-    const promo = source.promoCode ? `\nPromo: ${source.promoCode} (${source.promoMessage})` : "";
-    db.jobs.unshift({
-      id: jobId,
-      reference: jobReference(db.jobs.map((item) => item.reference)),
-      customerId,
-      services: (source.summary || "").slice(0, 500),
-      address,
-      scheduledDate: booking?.date ?? "",
-      timeWindow: booking?.timeWindow ?? "",
-      completedDate: "",
-      price: "",
-      status: "scheduled",
-      notes: `${lead?.message || booking?.notes || ""}${promo}`.trim(),
-      beforePhotos: [],
-      afterPhotos: [],
-      history: [{ at: nowIso(), status: "scheduled", note: `Created from website ${kind} ${source.reference}` }],
-      sourceRef: source.reference,
-      createdAt: nowIso(),
-      updatedAt: nowIso(),
-    });
-    source.status = "booked";
+    if (source.status === "new" || source.status === "contacted" || source.status === "quoted") source.status = "booked";
   });
   if (!found) return { ok: false, error: "That enquiry no longer exists." };
-  await syncCustomerSheets(saved, [customerId], [jobId]);
+  await syncCustomerSheets(saved, [linked.customerId], [linked.jobId]);
   const lead = saved.leads.find((item) => item.id === id);
   const booking = saved.bookings.find((item) => item.id === id);
   if (lead) await syncSheet("Leads", [leadSheetRow(lead)]);
   if (booking) await syncSheet("Bookings", [bookingSheetRow(booking)]);
   revalidatePath("/admin", "layout");
-  return { ok: true, id: customerId, message: "Customer and job created." };
+  return { ok: true, id: linked.customerId, message: "Job confirmed." };
 }
 
 export async function logCampaignAction(input: { title: string; message: string; channel: "whatsapp" | "sms"; recipientIds: string[] }): Promise<ActionResult> {

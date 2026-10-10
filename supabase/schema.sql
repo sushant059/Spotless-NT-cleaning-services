@@ -321,7 +321,7 @@ create table if not exists public.jobs (
   time_window text not null default '',
   completed_date date,
   price text not null default '',
-  status text not null default 'scheduled' check (status in ('scheduled', 'in-progress', 'done', 'complaint', 'redo', 'cancelled')),
+  status text not null default 'scheduled' check (status in ('requested', 'scheduled', 'in-progress', 'done', 'complaint', 'redo', 'cancelled')),
   notes text not null default '',
   before_photos jsonb not null default '[]',
   after_photos jsonb not null default '[]',
@@ -334,6 +334,8 @@ create index if not exists jobs_customer_id_idx on public.jobs (customer_id);
 alter table public.jobs add column if not exists time_window text not null default '';
 create index if not exists jobs_scheduled_date_idx on public.jobs (scheduled_date);
 create index if not exists bookings_appointment_date_idx on public.bookings (appointment_date);
+alter table public.jobs drop constraint if exists jobs_status_check;
+alter table public.jobs add constraint jobs_status_check check (status in ('requested', 'scheduled', 'in-progress', 'done', 'complaint', 'redo', 'cancelled'));
 
 create table if not exists public.campaigns (
   id text primary key,
