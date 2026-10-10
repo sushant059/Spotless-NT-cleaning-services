@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BadgePercent, ExternalLink, Images, LayoutDashboard, ListChecks, LogOut, MessageSquareQuote, Settings, Sparkles, SquareStack, Inbox } from "lucide-react";
+import { BadgePercent, ExternalLink, Images, Inbox, LayoutDashboard, ListChecks, LogOut, MessageSquareQuote, Send, Settings, Sparkles, SquareStack, Users } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { logoutAction } from "@/lib/actions";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 const LINKS = [
   ["/admin", "Dashboard", LayoutDashboard],
   ["/admin/leads", "Leads & bookings", Inbox],
+  ["/admin/customers", "Customers & jobs", Users],
+  ["/admin/messages", "Send offers", Send],
   ["/admin/reviews", "Reviews", MessageSquareQuote],
   ["/admin/services", "Services", SquareStack],
   ["/admin/results", "Before & after", Sparkles],

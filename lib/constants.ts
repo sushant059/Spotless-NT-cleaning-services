@@ -9,6 +9,15 @@ export const SERVICE_CATEGORIES: { id: ServiceCategory; title: string; short: st
 
 export const SERVICE_CATEGORY_IDS = SERVICE_CATEGORIES.map((category) => category.id);
 
+export const JOB_STATUSES = [
+  { id: "scheduled", label: "Scheduled", tone: "bg-brand-light text-brand" },
+  { id: "in-progress", label: "In progress", tone: "bg-sun-soft text-[#8A5A00]" },
+  { id: "done", label: "Done", tone: "bg-leaf-soft text-leaf-dark" },
+  { id: "complaint", label: "Complaint", tone: "bg-red-50 text-danger" },
+  { id: "redo", label: "Redo booked", tone: "bg-[#F1E8FF] text-[#6B2FB3]" },
+  { id: "cancelled", label: "Cancelled", tone: "bg-mist text-slate" },
+] as const;
+
 export const STATUS_OPTIONS = ["new", "contacted", "quoted", "booked", "completed", "lost"] as const;
 
 export const TIME_WINDOWS = [

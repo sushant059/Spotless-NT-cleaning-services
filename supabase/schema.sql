@@ -293,6 +293,62 @@ create policy "admin write media" on public.media for all using (private.is_admi
 drop policy if exists "admin users" on public.admin_users;
 create policy "admin users" on public.admin_users for all using (private.is_admin()) with check (private.is_admin());
 
+-- Customers, jobs and offer messages (admin only).
+create table if not exists public.customers (
+  id text primary key,
+  type text not null default 'person' check (type in ('person', 'company')),
+  name text not null,
+  company_name text not null default '',
+  phone text not null default '',
+  email text not null default '',
+  address text not null default '',
+  suburb text not null default '',
+  notes text not null default '',
+  marketing_opt_in boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.jobs (
+  id text primary key,
+  reference text not null default '',
+  customer_id text not null references public.customers(id) on delete cascade,
+  services text not null default '',
+  address text not null default '',
+  scheduled_date date,
+  completed_date date,
+  price text not null default '',
+  status text not null default 'scheduled' check (status in ('scheduled', 'in-progress', 'done', 'complaint', 'redo', 'cancelled')),
+  notes text not null default '',
+  before_photos jsonb not null default '[]',
+  after_photos jsonb not null default '[]',
+  history jsonb not null default '[]',
+  source_ref text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists jobs_customer_id_idx on public.jobs (customer_id);
+
+create table if not exists public.campaigns (
+  id text primary key,
+  title text not null default '',
+  message text not null,
+  channel text not null default 'whatsapp' check (channel in ('whatsapp', 'sms')),
+  recipient_ids jsonb not null default '[]',
+  created_at timestamptz not null default now()
+);
+
+alter table public.customers enable row level security;
+alter table public.jobs enable row level security;
+alter table public.campaigns enable row level security;
+
+drop policy if exists "admin customers" on public.customers;
+create policy "admin customers" on public.customers for all using (private.is_admin()) with check (private.is_admin());
+drop policy if exists "admin jobs" on public.jobs;
+create policy "admin jobs" on public.jobs for all using (private.is_admin()) with check (private.is_admin());
+drop policy if exists "admin campaigns" on public.campaigns;
+create policy "admin campaigns" on public.campaigns for all using (private.is_admin()) with check (private.is_admin());
+
 insert into storage.buckets (id, name, public)
 values ('media', 'media', true)
 on conflict (id) do nothing;

@@ -177,6 +177,56 @@ export type MediaItem = {
   createdAt: string;
 };
 
+export type CustomerType = "person" | "company";
+
+export type Customer = {
+  id: string;
+  type: CustomerType;
+  name: string;
+  companyName: string;
+  phone: string;
+  email: string;
+  address: string;
+  suburb: string;
+  notes: string;
+  /** Agreed to receive offers. Required before sending marketing messages (Spam Act 2003). */
+  marketingOptIn: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type JobStatus = "scheduled" | "in-progress" | "done" | "complaint" | "redo" | "cancelled";
+
+export type JobEvent = { at: string; status: JobStatus; note: string };
+
+export type Job = {
+  id: string;
+  reference: string;
+  customerId: string;
+  services: string;
+  address: string;
+  scheduledDate: string;
+  completedDate: string;
+  price: string;
+  status: JobStatus;
+  notes: string;
+  beforePhotos: string[];
+  afterPhotos: string[];
+  history: JobEvent[];
+  sourceRef: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Campaign = {
+  id: string;
+  title: string;
+  message: string;
+  channel: "whatsapp" | "sms";
+  recipientIds: string[];
+  createdAt: string;
+};
+
 export type Database = {
   version: 1;
   settings: Settings;
@@ -190,6 +240,9 @@ export type Database = {
   faqs: Faq[];
   blockedDates: BlockedDate[];
   media: MediaItem[];
+  customers: Customer[];
+  jobs: Job[];
+  campaigns: Campaign[];
 };
 
 export type ActionResult =

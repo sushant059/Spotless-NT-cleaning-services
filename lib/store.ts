@@ -6,6 +6,8 @@ import { seedDatabase } from "@/lib/seed";
 import type {
   BlockedDate,
   Booking,
+  Customer,
+  Job,
   Database,
   Faq,
   IconName,
@@ -98,6 +100,9 @@ export function normalizeDb(db: Database): Database {
     duration: service.duration ?? "",
     gallery: Array.isArray(service.gallery) ? service.gallery : [],
   }));
+  db.customers = Array.isArray(db.customers) ? db.customers : [];
+  db.jobs = Array.isArray(db.jobs) ? db.jobs : [];
+  db.campaigns = Array.isArray(db.campaigns) ? db.campaigns : [];
   db.bookings = db.bookings.map((booking) => ({ ...booking, promoCode: booking.promoCode ?? "", promoMessage: booking.promoMessage ?? "" }));
   db.reviews = db.reviews.map((review) => {
     const legacy = review as Review & { visible?: boolean };
@@ -240,7 +245,7 @@ async function loadSupabase(sb: SupabaseClient, seedIfEmpty: boolean): Promise<D
     await syncSupabase(sb, null, seedDatabase());
     return loadSupabase(sb, false);
   }
-  const [services, offers, promos, leads, bookings, results, reviews, faqs, blocked, media] = await Promise.all([
+  const [services, offers, promos, leads, bookings, results, reviews, faqs, blocked, media, customers, jobs, campaigns] = await Promise.all([
     expect(await sb.from("services").select("*")),
     expect(await sb.from("offers").select("*")),
     expect(await sb.from("promo_codes").select("*")),
@@ -251,6 +256,9 @@ async function loadSupabase(sb: SupabaseClient, seedIfEmpty: boolean): Promise<D
     expect(await sb.from("faqs").select("*")),
     expect(await sb.from("blocked_dates").select("*")),
     expect(await sb.from("media").select("*")),
+    expect(await sb.from("customers").select("*").order("created_at", { ascending: false })),
+    expect(await sb.from("jobs").select("*").order("created_at", { ascending: false })),
+    expect(await sb.from("campaigns").select("*").order("created_at", { ascending: false })),
   ]);
   return normalizeDb({
     version: 1,
@@ -325,7 +333,93 @@ async function loadSupabase(sb: SupabaseClient, seedIfEmpty: boolean): Promise<D
       slot: String(row.slot ?? ""),
       createdAt: String(row.created_at),
     })),
+    customers: (customers as Record<string, unknown>[]).map(mapCustomer),
+    jobs: (jobs as Record<string, unknown>[]).map(mapJob),
+    campaigns: (campaigns as Record<string, unknown>[]).map((row) => ({
+      id: String(row.id),
+      title: String(row.title ?? ""),
+      message: String(row.message ?? ""),
+      channel: row.channel === "sms" ? "sms" : "whatsapp",
+      recipientIds: asArray<string>(row.recipient_ids),
+      createdAt: String(row.created_at),
+    })),
   });
+}
+
+function mapCustomer(row: Record<string, unknown>): Customer {
+  return {
+    id: String(row.id),
+    type: row.type === "company" ? "company" : "person",
+    name: String(row.name ?? ""),
+    companyName: String(row.company_name ?? ""),
+    phone: String(row.phone ?? ""),
+    email: String(row.email ?? ""),
+    address: String(row.address ?? ""),
+    suburb: String(row.suburb ?? ""),
+    notes: String(row.notes ?? ""),
+    marketingOptIn: Boolean(row.marketing_opt_in),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at ?? row.created_at),
+  };
+}
+
+export function customerRow(customer: Customer) {
+  return {
+    id: customer.id,
+    type: customer.type,
+    name: customer.name,
+    company_name: customer.companyName,
+    phone: customer.phone,
+    email: customer.email,
+    address: customer.address,
+    suburb: customer.suburb,
+    notes: customer.notes,
+    marketing_opt_in: customer.marketingOptIn,
+    created_at: customer.createdAt,
+    updated_at: customer.updatedAt,
+  };
+}
+
+function mapJob(row: Record<string, unknown>): Job {
+  return {
+    id: String(row.id),
+    reference: String(row.reference ?? ""),
+    customerId: String(row.customer_id ?? ""),
+    services: String(row.services ?? ""),
+    address: String(row.address ?? ""),
+    scheduledDate: String(row.scheduled_date ?? ""),
+    completedDate: String(row.completed_date ?? ""),
+    price: String(row.price ?? ""),
+    status: (row.status as Job["status"]) || "scheduled",
+    notes: String(row.notes ?? ""),
+    beforePhotos: asArray<string>(row.before_photos),
+    afterPhotos: asArray<string>(row.after_photos),
+    history: asArray(row.history),
+    sourceRef: String(row.source_ref ?? ""),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at ?? row.created_at),
+  };
+}
+
+export function jobRow(job: Job) {
+  return {
+    id: job.id,
+    reference: job.reference,
+    customer_id: job.customerId,
+    services: job.services,
+    address: job.address,
+    scheduled_date: job.scheduledDate || null,
+    completed_date: job.completedDate || null,
+    price: job.price,
+    status: job.status,
+    notes: job.notes,
+    before_photos: job.beforePhotos,
+    after_photos: job.afterPhotos,
+    history: job.history,
+    source_ref: job.sourceRef,
+    created_at: job.createdAt,
+    updated_at: job.updatedAt,
+  };
 }
 
 function mapLead(row: Record<string, unknown>): Lead {
@@ -352,7 +446,7 @@ function mapLead(row: Record<string, unknown>): Lead {
   };
 }
 
-function leadRow(lead: Lead) {
+export function leadRow(lead: Lead) {
   return {
     id: lead.id,
     reference: lead.reference,
@@ -399,7 +493,7 @@ function mapBooking(row: Record<string, unknown>): Booking {
   };
 }
 
-function bookingRow(booking: Booking) {
+export function bookingRow(booking: Booking) {
   return {
     id: booking.id,
     reference: booking.reference,
@@ -517,6 +611,12 @@ function snapshot(db: Database): Snapshot {
       slot: item.slot,
       created_at: item.createdAt,
     })),
+  );
+  replaceRows("customers", db.customers.map(customerRow));
+  replaceRows("jobs", db.jobs.map(jobRow));
+  replaceRows(
+    "campaigns",
+    db.campaigns.map((item) => ({ id: item.id, title: item.title, message: item.message, channel: item.channel, recipient_ids: item.recipientIds, created_at: item.createdAt })),
   );
   return { settings: JSON.stringify(settingsRow(db.settings)), tables };
 }

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Inbox, MessageSquareQuote, TrendingUp } from "lucide-react";
-import { getDb } from "@/lib/store";
+import { DataStatus } from "@/components/admin/data-status";
+import { sheetsEnabled } from "@/lib/sheets";
+import { getDb, usingSupabase } from "@/lib/store";
 import { darwinISODate, formatDisplayDateTime } from "@/lib/utils";
 
 export default async function DashboardPage() {
@@ -27,6 +29,7 @@ export default async function DashboardPage() {
         <p className="text-sm font-semibold text-slate">G’day 👋</p>
         <h1 className="text-3xl font-bold text-navy">Dashboard</h1>
       </div>
+      {(!usingSupabase() || !sheetsEnabled()) && <DataStatus supabase={usingSupabase()} sheets={sheetsEnabled()} />}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat icon={<Inbox className="h-5 w-5" />} label="New, not yet contacted" value={fresh} href="/admin/leads" tone="bg-sun-soft text-[#8A5A00]" />
         <Stat icon={<CalendarDays className="h-5 w-5" />} label="Requests today" value={leadsToday} href="/admin/leads" tone="bg-brand-light text-brand" />

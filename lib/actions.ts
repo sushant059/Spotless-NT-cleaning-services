@@ -11,8 +11,9 @@ import { customerEmail, ownerLeadEmail, sendMail } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
 import { seedDatabase } from "@/lib/seed";
 import { getDb, storeMediaFile, supabaseAnon, updateDb, usingSupabase } from "@/lib/store";
-import type { ActionResult, Booking, DetailValue, Faq, Lead, Offer, Promo, ResultPair, Review, Service, Settings } from "@/lib/types";
-import { byOrder, escapeHtml, slugify, uid, uniqueReference } from "@/lib/utils";
+import type { ActionResult, Booking, Customer, Database, DetailValue, Faq, Job, Lead, Offer, Promo, ResultPair, Review, Service, Settings } from "@/lib/types";
+import { bookingSheetRow, customerSheetRow, jobSheetRow, leadSheetRow, sheetsEnabled, syncEverything, syncSheet } from "@/lib/sheets";
+import { byOrder, darwinISODate, escapeHtml, slugify, uid, uniqueReference } from "@/lib/utils";
 import {
   bookingSchema,
   chatSchema,
@@ -98,6 +99,18 @@ async function notify(settings: Settings, input: Parameters<typeof ownerLeadEmai
   return sendMail(messages);
 }
 
+async function syncLeadSheet(db: Database, reference: string) {
+  if (!sheetsEnabled() || !reference) return;
+  const lead = db.leads.find((item) => item.reference === reference);
+  if (lead) await syncSheet("Leads", [leadSheetRow(lead)]);
+}
+
+async function syncBookingSheet(db: Database, reference: string) {
+  if (!sheetsEnabled() || !reference) return;
+  const booking = db.bookings.find((item) => item.reference === reference);
+  if (booking) await syncSheet("Bookings", [bookingSheetRow(booking)]);
+}
+
 export async function loginAction(formData: FormData): Promise<ActionResult> {
   const block = limited(await clientKey("login"), 8, 15 * 60 * 1000);
   if (block) return block;
@@ -169,7 +182,7 @@ export async function submitQuote(formData: FormData): Promise<ActionResult> {
   let promoMessage = "";
   let emailed = false;
   const settings = db.settings;
-  await updateDb((next) => {
+  const saved = await updateDb((next) => {
     reference = uniqueReference([...next.leads.map((lead) => lead.reference), ...next.bookings.map((booking) => booking.reference)]);
     const promo = applyPromo(next, parsed.data.promo);
     promoMessage = promo.message;
@@ -208,6 +221,7 @@ export async function submitQuote(formData: FormData): Promise<ActionResult> {
     message: [parsed.data.notes, promoMessage].filter(Boolean).join("\n"),
     extra: photos.length ? `${photos.length} photo${photos.length === 1 ? "" : "s"} attached in admin.` : "",
   }, { email: parsed.data.email, name: parsed.data.name, kind: "quote request", reference });
+  await syncLeadSheet(saved, reference);
   refresh();
   return { ok: true, reference, emailed, message: promoMessage };
 }
@@ -227,7 +241,7 @@ export async function submitContact(formData: FormData): Promise<ActionResult> {
   const db = await getDb();
   const phone = parsed.data.phone ? normalizeAuPhone(parsed.data.phone) || "" : "";
   let reference = "";
-  await updateDb((next) => {
+  const saved = await updateDb((next) => {
     reference = uniqueReference([...next.leads.map((lead) => lead.reference), ...next.bookings.map((item) => item.reference)]);
     next.leads.unshift({
       id: uid("lead"),
@@ -262,6 +276,7 @@ export async function submitContact(formData: FormData): Promise<ActionResult> {
     message: parsed.data.message,
     extra: "",
   }, { email: parsed.data.email, name: parsed.data.name, kind: "message", reference });
+  await syncLeadSheet(saved, reference);
   refresh();
   return { ok: true, reference, emailed };
 }
@@ -281,7 +296,7 @@ export async function submitChat(input: unknown): Promise<ActionResult> {
   const phone = normalizeAuPhone(parsed.data.phone) || parsed.data.phone;
   let reference = "";
   let promoMessage = "";
-  await updateDb((next) => {
+  const saved = await updateDb((next) => {
     reference = uniqueReference([...next.leads.map((lead) => lead.reference), ...next.bookings.map((item) => item.reference)]);
     const promo = applyPromo(next, parsed.data.promo);
     promoMessage = promo.message;
@@ -319,6 +334,7 @@ export async function submitChat(input: unknown): Promise<ActionResult> {
     message: promoMessage,
     extra: parsed.data.preferredTime ? `Preferred time: ${parsed.data.preferredTime}` : "",
   });
+  await syncLeadSheet(saved, reference);
   refresh();
   return { ok: true, reference, message: promoMessage };
 }
@@ -346,7 +362,7 @@ export async function submitBooking(input: unknown): Promise<ActionResult> {
   const summary = summariseJob(services, parsed.data.details).join("\n");
   let reference = "";
   let promoMessage = "";
-  await updateDb((next) => {
+  const saved = await updateDb((next) => {
     reference = uniqueReference([...next.leads.map((lead) => lead.reference), ...next.bookings.map((item) => item.reference)]);
     const promo = applyPromo(next, parsed.data.promo);
     promoMessage = promo.message;
@@ -383,6 +399,7 @@ export async function submitBooking(input: unknown): Promise<ActionResult> {
     message: [parsed.data.notes, promoMessage && `Promo code: ${parsed.data.promo.toUpperCase()} — ${promoMessage}`].filter(Boolean).join("\n"),
     extra: `${parsed.data.date} · ${timeWindowLabel(parsed.data.timeWindow)} · ${parsed.data.address}`,
   }, { email: parsed.data.email, name: parsed.data.name, kind: "booking request", reference });
+  await syncBookingSheet(saved, reference);
   refresh();
   return { ok: true, reference, emailed, message: promoMessage };
 }
@@ -519,12 +536,14 @@ export async function deletePromoAction(id: string): Promise<ActionResult> {
 export async function updateLeadAction(id: string, patch: { status?: Lead["status"]; internalNotes?: string }): Promise<ActionResult> {
   const auth = await guard();
   if (!auth.ok) return auth;
-  await updateDb((db) => {
+  const saved = await updateDb((db) => {
     const lead = db.leads.find((item) => item.id === id);
     if (!lead) return;
     if (patch.status) lead.status = patch.status;
     if (patch.internalNotes !== undefined) lead.internalNotes = patch.internalNotes.slice(0, 2000);
   });
+  const lead = saved.leads.find((item) => item.id === id);
+  if (lead && sheetsEnabled()) await syncSheet("Leads", [leadSheetRow(lead)]);
   refresh();
   return { ok: true };
 }
@@ -533,6 +552,7 @@ export async function deleteLeadAction(id: string): Promise<ActionResult> {
   const auth = await guard();
   if (!auth.ok) return auth;
   await updateDb((db) => { db.leads = db.leads.filter((item) => item.id !== id); });
+  await syncSheet("Leads", [], [id]);
   refresh();
   return { ok: true };
 }
@@ -540,12 +560,14 @@ export async function deleteLeadAction(id: string): Promise<ActionResult> {
 export async function updateBookingAction(id: string, patch: { status?: Booking["status"]; internalNotes?: string }): Promise<ActionResult> {
   const auth = await guard();
   if (!auth.ok) return auth;
-  await updateDb((db) => {
+  const saved = await updateDb((db) => {
     const booking = db.bookings.find((item) => item.id === id);
     if (!booking) return;
     if (patch.status) booking.status = patch.status;
     if (patch.internalNotes !== undefined) booking.internalNotes = patch.internalNotes.slice(0, 2000);
   });
+  const booking = saved.bookings.find((item) => item.id === id);
+  if (booking && sheetsEnabled()) await syncSheet("Bookings", [bookingSheetRow(booking)]);
   refresh();
   return { ok: true };
 }
@@ -554,6 +576,7 @@ export async function deleteBookingAction(id: string): Promise<ActionResult> {
   const auth = await guard();
   if (!auth.ok) return auth;
   await updateDb((db) => { db.bookings = db.bookings.filter((item) => item.id !== id); });
+  await syncSheet("Bookings", [], [id]);
   refresh();
   return { ok: true };
 }
@@ -805,4 +828,232 @@ export async function createServiceAction(title: string): Promise<ActionResult> 
   });
   refresh();
   return { ok: true, message: "Service added. It stays hidden until you switch it on." };
+}
+
+/* ------------------------------------------------------------------ */
+/* Customers, jobs and offer messages                                   */
+/* ------------------------------------------------------------------ */
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function jobReference(existing: string[]) {
+  const used = new Set(existing);
+  let code = "";
+  do code = `JOB-${Math.floor(10000 + Math.random() * 90000)}`;
+  while (used.has(code));
+  return code;
+}
+
+async function syncCustomerSheets(db: Database, customerIds: string[], jobIds: string[] = [], removed: { customers?: string[]; jobs?: string[] } = {}) {
+  if (!sheetsEnabled()) return;
+  await Promise.all([
+    syncSheet("Customers", db.customers.filter((item) => customerIds.includes(item.id)).map((item) => customerSheetRow(item, db.jobs)), removed.customers ?? []),
+    syncSheet("Jobs", db.jobs.filter((item) => jobIds.includes(item.id)).map((item) => jobSheetRow(item, db.customers)), removed.jobs ?? []),
+  ]);
+}
+
+const customerSchema = z.object({
+  type: z.enum(["person", "company"]),
+  name: z.string().trim().min(2, "Add the contact name").max(100),
+  companyName: z.string().trim().max(120),
+  phone: z.string().trim().max(30).refine((value) => value === "" || normalizeAuPhone(value) !== null, "Enter an Australian phone number, or leave it blank"),
+  email: z.string().trim().max(120).refine((value) => value === "" || z.string().email().safeParse(value).success, "Enter a valid email, or leave it blank"),
+  address: z.string().trim().max(200),
+  suburb: z.string().trim().max(80),
+  notes: z.string().trim().max(3000),
+  marketingOptIn: z.boolean(),
+});
+
+export async function saveCustomerAction(customer: Customer): Promise<ActionResult & { id?: string }> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  const parsed = customerSchema.safeParse(customer);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message || "Check the customer details." };
+  if (parsed.data.type === "company" && parsed.data.companyName.length < 2) return { ok: false, error: "Add the company name." };
+  const phone = parsed.data.phone ? normalizeAuPhone(parsed.data.phone) || parsed.data.phone : "";
+  const id = customer.id || uid("cust");
+  const saved = await updateDb((db) => {
+    const index = db.customers.findIndex((item) => item.id === id);
+    const next: Customer = { ...parsed.data, phone, id, createdAt: index >= 0 ? db.customers[index].createdAt : nowIso(), updatedAt: nowIso() };
+    if (index >= 0) db.customers[index] = next;
+    else db.customers.unshift(next);
+  });
+  await syncCustomerSheets(saved, [id]);
+  revalidatePath("/admin", "layout");
+  return { ok: true, id, message: "Customer saved." };
+}
+
+export async function deleteCustomerAction(id: string): Promise<ActionResult> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  let jobIds: string[] = [];
+  const saved = await updateDb((db) => {
+    jobIds = db.jobs.filter((job) => job.customerId === id).map((job) => job.id);
+    db.customers = db.customers.filter((item) => item.id !== id);
+    db.jobs = db.jobs.filter((job) => job.customerId !== id);
+  });
+  await syncCustomerSheets(saved, [], [], { customers: [id], jobs: jobIds });
+  revalidatePath("/admin", "layout");
+  return { ok: true, message: "Customer and their jobs deleted." };
+}
+
+const JOB_STATUS_IDS = ["scheduled", "in-progress", "done", "complaint", "redo", "cancelled"] as const;
+
+export async function saveJobAction(job: Job, note = ""): Promise<ActionResult & { id?: string }> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  if (!job.customerId) return { ok: false, error: "Choose a customer." };
+  if (job.services.trim().length < 2) return { ok: false, error: "Describe the job (services)." };
+  if (!JOB_STATUS_IDS.includes(job.status)) return { ok: false, error: "Choose a status." };
+  const urls = (items: string[]) => items.map((item) => item.trim()).filter(Boolean).slice(0, 30);
+  const id = job.id || uid("job");
+  let missingCustomer = false;
+  const saved = await updateDb((db) => {
+    if (!db.customers.some((item) => item.id === job.customerId)) {
+      missingCustomer = true;
+      return;
+    }
+    const index = db.jobs.findIndex((item) => item.id === id);
+    const previous = index >= 0 ? db.jobs[index] : null;
+    const history = [...(previous?.history ?? [])];
+    // Every status change, and any note added with it, goes into the job's history.
+    if (!previous || previous.status !== job.status || note.trim()) {
+      history.push({ at: nowIso(), status: job.status, note: note.trim().slice(0, 1000) || (previous ? "" : "Job created") });
+    }
+    const next: Job = {
+      ...job,
+      id,
+      reference: previous?.reference || job.reference || jobReference(db.jobs.map((item) => item.reference)),
+      services: job.services.trim().slice(0, 500),
+      notes: job.notes.slice(0, 3000),
+      price: job.price.trim().slice(0, 40),
+      completedDate: job.status === "done" && !job.completedDate ? darwinISODate() : job.completedDate,
+      beforePhotos: urls(job.beforePhotos),
+      afterPhotos: urls(job.afterPhotos),
+      history,
+      createdAt: previous?.createdAt || nowIso(),
+      updatedAt: nowIso(),
+    };
+    if (index >= 0) db.jobs[index] = next;
+    else db.jobs.unshift(next);
+  });
+  if (missingCustomer) return { ok: false, error: "That customer no longer exists." };
+  await syncCustomerSheets(saved, [job.customerId], [id]);
+  revalidatePath("/admin", "layout");
+  return { ok: true, id, message: "Job saved." };
+}
+
+export async function deleteJobAction(id: string): Promise<ActionResult> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  let customerId = "";
+  const saved = await updateDb((db) => {
+    customerId = db.jobs.find((job) => job.id === id)?.customerId ?? "";
+    db.jobs = db.jobs.filter((job) => job.id !== id);
+  });
+  await syncCustomerSheets(saved, customerId ? [customerId] : [], [], { jobs: [id] });
+  revalidatePath("/admin", "layout");
+  return { ok: true, message: "Job deleted." };
+}
+
+/** Turns a website enquiry or booking into a customer (matched by phone) and a scheduled job. */
+export async function convertToCustomerAction(kind: "lead" | "booking", id: string): Promise<ActionResult & { id?: string }> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  let customerId = "";
+  let jobId = "";
+  let found = true;
+  const saved = await updateDb((db) => {
+    const lead = kind === "lead" ? db.leads.find((item) => item.id === id) : undefined;
+    const booking = kind === "booking" ? db.bookings.find((item) => item.id === id) : undefined;
+    const source = lead ?? booking;
+    if (!source) {
+      found = false;
+      return;
+    }
+    const phone = normalizeAuPhone(source.phone) || source.phone;
+    const existing = phone ? db.customers.find((item) => (normalizeAuPhone(item.phone) || item.phone) === phone) : undefined;
+    const address = booking ? `${booking.address}, ${booking.suburb}` : lead?.suburb ?? "";
+    if (existing) {
+      customerId = existing.id;
+      if (!existing.email && source.email) existing.email = source.email;
+      if (!existing.address && address) existing.address = address;
+      existing.updatedAt = nowIso();
+    } else {
+      customerId = uid("cust");
+      db.customers.unshift({
+        id: customerId,
+        type: "person",
+        name: source.name,
+        companyName: "",
+        phone,
+        email: source.email,
+        address,
+        suburb: booking?.suburb ?? lead?.suburb ?? "",
+        notes: "",
+        marketingOptIn: false,
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      });
+    }
+    jobId = uid("job");
+    const promo = source.promoCode ? `\nPromo: ${source.promoCode} (${source.promoMessage})` : "";
+    db.jobs.unshift({
+      id: jobId,
+      reference: jobReference(db.jobs.map((item) => item.reference)),
+      customerId,
+      services: (source.summary || "").slice(0, 500),
+      address,
+      scheduledDate: booking?.date ?? "",
+      completedDate: "",
+      price: "",
+      status: "scheduled",
+      notes: `${lead?.message || booking?.notes || ""}${promo}`.trim(),
+      beforePhotos: [],
+      afterPhotos: [],
+      history: [{ at: nowIso(), status: "scheduled", note: `Created from website ${kind} ${source.reference}` }],
+      sourceRef: source.reference,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    });
+    source.status = "booked";
+  });
+  if (!found) return { ok: false, error: "That enquiry no longer exists." };
+  await syncCustomerSheets(saved, [customerId], [jobId]);
+  const lead = saved.leads.find((item) => item.id === id);
+  const booking = saved.bookings.find((item) => item.id === id);
+  if (lead) await syncSheet("Leads", [leadSheetRow(lead)]);
+  if (booking) await syncSheet("Bookings", [bookingSheetRow(booking)]);
+  revalidatePath("/admin", "layout");
+  return { ok: true, id: customerId, message: "Customer and job created." };
+}
+
+export async function logCampaignAction(input: { title: string; message: string; channel: "whatsapp" | "sms"; recipientIds: string[] }): Promise<ActionResult> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  if (input.message.trim().length < 5) return { ok: false, error: "Write the message first." };
+  if (!input.recipientIds.length) return { ok: false, error: "Nobody was sent this message." };
+  await updateDb((db) => {
+    const allowed = new Set(db.customers.filter((item) => item.marketingOptIn).map((item) => item.id));
+    db.campaigns.unshift({
+      id: uid("camp"),
+      title: input.title.trim().slice(0, 120) || "Offer",
+      message: input.message.trim().slice(0, 1000),
+      channel: input.channel,
+      recipientIds: input.recipientIds.filter((item) => allowed.has(item)),
+      createdAt: nowIso(),
+    });
+  });
+  revalidatePath("/admin", "layout");
+  return { ok: true, message: "Saved to message history." };
+}
+
+export async function syncSheetsAction(): Promise<ActionResult> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  if (!sheetsEnabled()) return { ok: false, error: "Google Sheets isn't connected yet. Add GOOGLE_SHEETS_WEBHOOK_URL and GOOGLE_SHEETS_SECRET in Vercel." };
+  const ok = await syncEverything(await getDb());
+  return ok ? { ok: true, message: "Google Sheet updated." } : { ok: false, error: "The sheet didn't accept the update. Check the Apps Script deployment and secret." };
 }

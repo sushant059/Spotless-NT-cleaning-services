@@ -394,5 +394,8 @@ export function seedDatabase(): Database {
     ],
     blockedDates: [],
     media: [],
+    customers: [],
+    jobs: [],
+    campaigns: [],
   };
 }

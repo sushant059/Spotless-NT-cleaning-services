@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deleteBookingAction, deleteLeadAction, deleteBlockedDateAction, saveBlockedDateAction, updateBookingAction, updateLeadAction } from "@/lib/actions";
+import { convertToCustomerAction, deleteBookingAction, deleteLeadAction, deleteBlockedDateAction, saveBlockedDateAction, updateBookingAction, updateLeadAction } from "@/lib/actions";
 import { STATUS_OPTIONS } from "@/lib/constants";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
@@ -86,7 +86,12 @@ function LeadCard({ lead }: { lead: Lead }) {
       </div>
       <label className="mt-3 block text-sm font-semibold" htmlFor={`notes-${lead.id}`}>Internal notes</label>
       <textarea id={`notes-${lead.id}`} className="mt-1 min-h-20 w-full rounded-input border border-line px-3 py-2" value={notes} onChange={(event) => setNotes(event.target.value)} onBlur={() => start(async () => { await updateLeadAction(lead.id, { internalNotes: notes }); router.refresh(); })} />
-      <div className="mt-3">
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button type="button" size="sm" disabled={pending} onClick={() => start(async () => {
+          const result = await convertToCustomerAction("lead", lead.id);
+          toast(result.ok ? result.message || "Created" : result.error, result.ok ? "ok" : "error");
+          if (result.ok && result.id) router.push(`/admin/customers/${result.id}`);
+        })}>Make customer & job</Button>
         <ConfirmDialog title="Delete this lead?" body="This removes the record from the admin list." confirmLabel="Delete lead" onConfirm={() => start(async () => { await deleteLeadAction(lead.id); toast("Lead deleted"); router.refresh(); })} trigger={<Button type="button" variant="danger" size="sm">Delete</Button>} />
       </div>
     </article>
@@ -122,7 +127,12 @@ function BookingCard({ booking }: { booking: Booking }) {
       </div>
       <label className="mt-3 block text-sm font-semibold" htmlFor={`bnotes-${booking.id}`}>Internal notes</label>
       <textarea id={`bnotes-${booking.id}`} className="mt-1 min-h-20 w-full rounded-input border border-line px-3 py-2" value={notes} onChange={(event) => setNotes(event.target.value)} onBlur={() => start(async () => { await updateBookingAction(booking.id, { internalNotes: notes }); router.refresh(); })} />
-      <div className="mt-3">
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button type="button" size="sm" disabled={pending} onClick={() => start(async () => {
+          const result = await convertToCustomerAction("booking", booking.id);
+          toast(result.ok ? result.message || "Created" : result.error, result.ok ? "ok" : "error");
+          if (result.ok && result.id) router.push(`/admin/customers/${result.id}`);
+        })}>Make customer & job</Button>
         <ConfirmDialog title="Delete this booking?" body="This removes the request. It does not email the customer." confirmLabel="Delete booking" onConfirm={() => start(async () => { await deleteBookingAction(booking.id); toast("Booking deleted"); router.refresh(); })} trigger={<Button type="button" variant="danger" size="sm">Delete</Button>} />
       </div>
     </article>
