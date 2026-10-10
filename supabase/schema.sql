@@ -57,7 +57,8 @@ create table if not exists public.site_settings (
   hero_video text not null default '',
   team_photo text not null default '',
   og_image text not null default '',
-  stats jsonb not null default '[]'
+  stats jsonb not null default '[]',
+  slot_capacity int not null default 1
 );
 
 create table if not exists public.services (
@@ -211,6 +212,7 @@ alter table public.reviews add column if not exists status text not null default
 alter table public.reviews add column if not exists email text not null default '';
 alter table public.reviews add column if not exists suburb text not null default '';
 alter table public.bookings add column if not exists promo_code text not null default '';
+alter table public.site_settings add column if not exists slot_capacity int not null default 1;
 alter table public.bookings add column if not exists promo_message text not null default '';
 alter table public.reviews drop constraint if exists reviews_source_check;
 alter table public.reviews add constraint reviews_source_check check (source in ('sample', 'manual', 'google', 'customer'));
@@ -316,6 +318,7 @@ create table if not exists public.jobs (
   services text not null default '',
   address text not null default '',
   scheduled_date date,
+  time_window text not null default '',
   completed_date date,
   price text not null default '',
   status text not null default 'scheduled' check (status in ('scheduled', 'in-progress', 'done', 'complaint', 'redo', 'cancelled')),
@@ -328,6 +331,9 @@ create table if not exists public.jobs (
   updated_at timestamptz not null default now()
 );
 create index if not exists jobs_customer_id_idx on public.jobs (customer_id);
+alter table public.jobs add column if not exists time_window text not null default '';
+create index if not exists jobs_scheduled_date_idx on public.jobs (scheduled_date);
+create index if not exists bookings_appointment_date_idx on public.bookings (appointment_date);
 
 create table if not exists public.campaigns (
   id text primary key,

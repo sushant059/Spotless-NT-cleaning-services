@@ -60,6 +60,8 @@ export type Settings = {
   teamPhoto: string;
   ogImage: string;
   stats: TrustStat[];
+  /** How many jobs can share one time slot (number of crews). */
+  slotCapacity: number;
 };
 
 export type Offer = {
@@ -206,6 +208,7 @@ export type Job = {
   services: string;
   address: string;
   scheduledDate: string;
+  timeWindow: string;
   completedDate: string;
   price: string;
   status: JobStatus;

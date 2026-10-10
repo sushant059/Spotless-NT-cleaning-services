@@ -12,6 +12,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { seedDatabase } from "@/lib/seed";
 import { getDb, storeMediaFile, supabaseAnon, updateDb, usingSupabase } from "@/lib/store";
 import type { ActionResult, Booking, Customer, Database, DetailValue, Faq, Job, Lead, Offer, Promo, ResultPair, Review, Service, Settings } from "@/lib/types";
+import { dayAvailability, isSlotFull, slotOccupants } from "@/lib/schedule";
 import { bookingSheetRow, customerSheetRow, jobSheetRow, leadSheetRow, sheetsEnabled, syncEverything, syncSheet } from "@/lib/sheets";
 import { byOrder, darwinISODate, escapeHtml, slugify, uid, uniqueReference } from "@/lib/utils";
 import {
@@ -147,6 +148,12 @@ export async function checkPromoAction(code: string) {
   if (!code.trim()) return { ok: true, message: "" };
   const result = checkPromo(code, db.promos);
   return { ok: result.ok, message: result.message };
+}
+
+export async function availabilityAction(date: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { blocked: false, full: [] as string[], allFull: false };
+  const db = await getDb();
+  return dayAvailability(db, date);
 }
 
 export async function botReplyAction(text: string) {
@@ -362,7 +369,13 @@ export async function submitBooking(input: unknown): Promise<ActionResult> {
   const summary = summariseJob(services, parsed.data.details).join("\n");
   let reference = "";
   let promoMessage = "";
+  let slotTaken = false;
   const saved = await updateDb((next) => {
+    // Checked inside the save so two people can't grab the same slot at the same moment.
+    if (isSlotFull(next, parsed.data.date, parsed.data.timeWindow)) {
+      slotTaken = true;
+      return;
+    }
     reference = uniqueReference([...next.leads.map((lead) => lead.reference), ...next.bookings.map((item) => item.reference)]);
     const promo = applyPromo(next, parsed.data.promo);
     promoMessage = promo.message;
@@ -388,6 +401,9 @@ export async function submitBooking(input: unknown): Promise<ActionResult> {
     };
     next.bookings.unshift(booking);
   });
+  if (slotTaken) {
+    return { ok: false, error: "Sorry, that time has just been booked. Please choose another time.", fields: { timeWindow: "That time is already booked." } };
+  }
   const emailed = await notify(db.settings, {
     kind: "booking request",
     reference,
@@ -434,6 +450,7 @@ const settingsSchema = z.object({
   teamPhoto: z.string().max(500),
   ogImage: z.string().max(500),
   stats: z.array(z.object({ value: z.string().max(20), label: z.string().max(40) })).max(3),
+  slotCapacity: z.number().int().min(1, "At least 1 job per time slot").max(20),
 });
 
 export async function saveSettingsAction(input: Settings): Promise<ActionResult> {
@@ -908,9 +925,14 @@ export async function saveJobAction(job: Job, note = ""): Promise<ActionResult &
   const urls = (items: string[]) => items.map((item) => item.trim()).filter(Boolean).slice(0, 30);
   const id = job.id || uid("job");
   let missingCustomer = false;
+  let clash: string[] = [];
   const saved = await updateDb((db) => {
     if (!db.customers.some((item) => item.id === job.customerId)) {
       missingCustomer = true;
+      return;
+    }
+    if (job.scheduledDate && job.timeWindow && job.status !== "cancelled" && isSlotFull(db, job.scheduledDate, job.timeWindow, { jobId: id })) {
+      clash = slotOccupants(db, job.scheduledDate, job.timeWindow, { jobId: id });
       return;
     }
     const index = db.jobs.findIndex((item) => item.id === id);
@@ -938,6 +960,9 @@ export async function saveJobAction(job: Job, note = ""): Promise<ActionResult &
     else db.jobs.unshift(next);
   });
   if (missingCustomer) return { ok: false, error: "That customer no longer exists." };
+  if (clash.length) {
+    return { ok: false, error: `That time is already booked by ${clash.join(", ")} on ${job.scheduledDate}, ${timeWindowLabel(job.timeWindow)}. Choose another time, or raise “Jobs per time slot” in Settings.` };
+  }
   await syncCustomerSheets(saved, [job.customerId], [id]);
   revalidatePath("/admin", "layout");
   return { ok: true, id, message: "Job saved." };
@@ -1005,6 +1030,7 @@ export async function convertToCustomerAction(kind: "lead" | "booking", id: stri
       services: (source.summary || "").slice(0, 500),
       address,
       scheduledDate: booking?.date ?? "",
+      timeWindow: booking?.timeWindow ?? "",
       completedDate: "",
       price: "",
       status: "scheduled",

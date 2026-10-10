@@ -1,5 +1,5 @@
 import type { Booking, Customer, Database, Job, Lead } from "@/lib/types";
-import { JOB_STATUSES } from "@/lib/constants";
+import { JOB_STATUSES, timeWindowLabel } from "@/lib/constants";
 
 /*
  * Mirrors customers, jobs, leads and bookings into a Google Sheet.
@@ -48,6 +48,7 @@ export function jobSheetRow(job: Job, customers: Customer[]): SheetRow {
     Services: job.services,
     Address: job.address,
     "Scheduled date": job.scheduledDate,
+    Time: job.timeWindow ? timeWindowLabel(job.timeWindow) : "",
     "Completed date": job.completedDate,
     Price: job.price,
     Status: statusLabel(job.status),
@@ -90,7 +91,7 @@ export function bookingSheetRow(booking: Booking): SheetRow {
     Phone: booking.phone,
     Email: booking.email,
     Date: booking.date,
-    "Time window": booking.timeWindow,
+    "Time window": timeWindowLabel(booking.timeWindow),
     Address: booking.address,
     Suburb: booking.suburb,
     Details: booking.summary,

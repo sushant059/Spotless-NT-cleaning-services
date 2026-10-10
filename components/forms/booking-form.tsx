@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { checkPromoAction, submitBooking } from "@/lib/actions";
+import { availabilityAction, checkPromoAction, submitBooking } from "@/lib/actions";
 import { SERVICE_FIELDS, SERVICE_TITLES, TIME_WINDOWS, defaultDetails, summariseJob, timeWindowLabel, validateDetails } from "@/lib/constants";
 import { bookingSchema, type BookingInput } from "@/lib/validators";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,22 @@ export function BookingForm({ services, areas, blocked, settings, initialService
   const [promoStatus, setPromoStatus] = useState<{ ok: boolean; message: string } | null>(null);
   const [checkingPromo, setCheckingPromo] = useState(false);
   const [confirmedPromo, setConfirmedPromo] = useState("");
+  const [availability, setAvailability] = useState<{ date: string; blocked: boolean; full: string[]; allFull: boolean } | null>(null);
+  const selectedDate = form.watch("date");
+
+  // Look up which time slots are already taken whenever the date changes.
+  useEffect(() => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(selectedDate || "")) return setAvailability(null);
+    let cancelled = false;
+    availabilityAction(selectedDate).then((result) => {
+      if (cancelled) return;
+      setAvailability({ date: selectedDate, ...result });
+      if (result.full.includes(form.getValues("timeWindow"))) form.setValue("timeWindow", "");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDate, form]);
 
   async function checkPromo() {
     const code = form.getValues("promo").trim();
@@ -72,8 +88,10 @@ export function BookingForm({ services, areas, blocked, settings, initialService
     }
     if (step === 2) {
       if (!values.date || values.date < today) return setError("Choose today or a later date.");
-      if (blocked.some((item) => item.date === values.date)) return setError("That date is unavailable. Please choose another day.");
+      if (blocked.some((item) => item.date === values.date) || (availability?.date === values.date && availability.blocked)) return setError("That date is unavailable. Please choose another day.");
+      if (availability?.date === values.date && availability.allFull) return setError("That day is fully booked. Please choose another day.");
       if (!values.timeWindow) return setError("Choose a time window.");
+      if (availability?.date === values.date && availability.full.includes(values.timeWindow)) return setError("That time is already booked. Please choose another time.");
     }
     if (step === 3 && (values.address.trim().length < 5 || values.suburb.trim().length < 2)) return setError("Enter the street address and suburb.");
     if (step === 4) {
@@ -163,8 +181,24 @@ export function BookingForm({ services, areas, blocked, settings, initialService
           <div>
             <p className="mb-2 text-sm font-semibold">Time window</p>
             <div className="grid gap-2 sm:grid-cols-2">
-              {TIME_WINDOWS.map((window) => <button type="button" key={window.id} aria-pressed={values.timeWindow === window.id} className={cn("min-h-12 rounded-full px-4 font-semibold", values.timeWindow === window.id ? "bg-brand text-white" : "bg-brand-light")} onClick={() => form.setValue("timeWindow", window.id)}>{window.label}</button>)}
+              {TIME_WINDOWS.map((window) => {
+                const taken = availability?.date === values.date && (availability.full.includes(window.id) || availability.blocked);
+                return (
+                  <button
+                    type="button"
+                    key={window.id}
+                    disabled={taken}
+                    aria-pressed={values.timeWindow === window.id}
+                    className={cn("min-h-12 rounded-full px-4 font-semibold", taken ? "cursor-not-allowed bg-mist text-slate/60 line-through" : values.timeWindow === window.id ? "bg-brand text-white" : "bg-brand-light")}
+                    onClick={() => form.setValue("timeWindow", window.id)}
+                  >
+                    {window.label}{taken && <span className="ml-2 text-xs font-bold uppercase no-underline">Booked</span>}
+                  </button>
+                );
+              })}
             </div>
+            {availability?.date === values.date && availability.blocked && <p className="mt-2 text-sm font-semibold text-danger">We’re not available on this day. Please choose another date.</p>}
+            {availability?.date === values.date && !availability.blocked && availability.allFull && <p className="mt-2 text-sm font-semibold text-danger">This day is fully booked. Please choose another date.</p>}
           </div>
           {blocked.length > 0 && <p className="text-sm text-slate">Unavailable: {blocked.map((item) => item.date).join(", ")}.</p>}
         </div>

@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BadgePercent, ExternalLink, Images, Inbox, LayoutDashboard, ListChecks, LogOut, MessageSquareQuote, Send, Settings, Sparkles, SquareStack, Users } from "lucide-react";
+import { BadgePercent, CalendarDays, ExternalLink, Images, Inbox, LayoutDashboard, ListChecks, LogOut, MessageSquareQuote, Send, Settings, Sparkles, SquareStack, Users } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { logoutAction } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
   ["/admin", "Dashboard", LayoutDashboard],
+  ["/admin/calendar", "Calendar", CalendarDays],
   ["/admin/leads", "Leads & bookings", Inbox],
   ["/admin/customers", "Customers & jobs", Users],
   ["/admin/messages", "Send offers", Send],

@@ -318,6 +318,7 @@ export function seedDatabase(): Database {
       teamPhoto: "",
       ogImage: "",
       stats: [],
+      slotCapacity: 1,
     },
     services,
     offers: [

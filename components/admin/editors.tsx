@@ -502,6 +502,12 @@ export function SettingsEditor({ settings, localMode }: { settings: Settings; lo
         </label>
       </Group>
 
+      <Group title="Bookings" note="How many jobs can happen in the same time slot. Keep 1 for one crew; set 2 if two crews work at once.">
+        <label className="block text-sm font-semibold text-navy" htmlFor="slot-capacity">Jobs per time slot
+          <Input id="slot-capacity" type="number" min={1} max={20} className="mt-1 font-normal" value={current.slotCapacity} onChange={(event) => set({ slotCapacity: Math.max(1, Number(event.target.value) || 1) })} />
+        </label>
+      </Group>
+
       <Group title="Opening hours">
         {current.openingHours.map((hour, index) => (
           <label key={hour.day} className="grid gap-1 text-sm font-semibold text-navy sm:grid-cols-[120px_1fr] sm:items-center">{hour.day}

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/fields";
 import { useToast } from "@/components/ui/toaster";
-import { JOB_STATUSES } from "@/lib/constants";
+import { JOB_STATUSES, TIME_WINDOWS, timeWindowLabel } from "@/lib/constants";
 import type { Customer, Job, JobStatus } from "@/lib/types";
 import { cn, formatDisplayDate, formatDisplayDateTime, waLink } from "@/lib/utils";
 
@@ -27,6 +27,7 @@ function emptyJob(customer: Customer): Job {
     services: "",
     address: customer.address,
     scheduledDate: "",
+    timeWindow: "",
     completedDate: "",
     price: "",
     status: "scheduled",
@@ -245,7 +246,7 @@ function JobCard({ job }: { job: Job }) {
         <div>
           <p className="text-sm font-semibold text-slate">{job.reference}{job.sourceRef && ` · from ${job.sourceRef}`}</p>
           <h3 className="whitespace-pre-wrap text-lg font-bold text-navy">{job.services}</h3>
-          <p className="text-sm text-slate">{[job.address, job.scheduledDate && `Scheduled ${formatDisplayDate(job.scheduledDate)}`, job.completedDate && `Done ${formatDisplayDate(job.completedDate)}`, job.price && `Price ${job.price}`].filter(Boolean).join(" · ")}</p>
+          <p className="text-sm text-slate">{[job.address, job.scheduledDate && `Scheduled ${formatDisplayDate(job.scheduledDate)}${job.timeWindow ? `, ${timeWindowLabel(job.timeWindow)}` : ""}`, job.completedDate && `Done ${formatDisplayDate(job.completedDate)}`, job.price && `Price ${job.price}`].filter(Boolean).join(" · ")}</p>
         </div>
         <StatusBadge status={job.status} />
       </div>
@@ -340,9 +341,16 @@ function JobForm({ initial, onDone }: { initial: Job; onDone: () => void }) {
     >
       <h3 className="text-lg font-bold text-navy">{initial.id ? `Edit ${initial.reference}` : "New job"}</h3>
       <div><Label htmlFor="j-services">Services / job description</Label><Textarea id="j-services" className="min-h-20" value={current.services} placeholder="e.g. Carpet cleaning — 3 bedrooms + hallway" onChange={(event) => set({ services: event.target.value })} /></div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="sm:col-span-2"><Label htmlFor="j-address">Job address</Label><Input id="j-address" value={current.address} onChange={(event) => set({ address: event.target.value })} /></div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="sm:col-span-2 lg:col-span-3"><Label htmlFor="j-address">Job address</Label><Input id="j-address" value={current.address} onChange={(event) => set({ address: event.target.value })} /></div>
         <div><Label htmlFor="j-date">Scheduled date</Label><Input id="j-date" type="date" value={current.scheduledDate} onChange={(event) => set({ scheduledDate: event.target.value })} /></div>
+        <div>
+          <Label htmlFor="j-time">Time slot</Label>
+          <Select id="j-time" value={current.timeWindow} onChange={(event) => set({ timeWindow: event.target.value })}>
+            <option value="">No set time</option>
+            {TIME_WINDOWS.map((window) => <option key={window.id} value={window.id}>{window.label}</option>)}
+          </Select>
+        </div>
         <div><Label htmlFor="j-price">Price</Label><Input id="j-price" value={current.price} placeholder="e.g. $240" onChange={(event) => set({ price: event.target.value })} /></div>
         <div>
           <Label htmlFor="j-status">Status</Label>

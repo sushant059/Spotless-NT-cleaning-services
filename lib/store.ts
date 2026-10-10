@@ -101,7 +101,8 @@ export function normalizeDb(db: Database): Database {
     gallery: Array.isArray(service.gallery) ? service.gallery : [],
   }));
   db.customers = Array.isArray(db.customers) ? db.customers : [];
-  db.jobs = Array.isArray(db.jobs) ? db.jobs : [];
+  db.jobs = Array.isArray(db.jobs) ? db.jobs.map((job) => ({ ...job, timeWindow: job.timeWindow ?? "" })) : [];
+  db.settings.slotCapacity = Math.max(1, Number(db.settings.slotCapacity) || 1);
   db.campaigns = Array.isArray(db.campaigns) ? db.campaigns : [];
   db.bookings = db.bookings.map((booking) => ({ ...booking, promoCode: booking.promoCode ?? "", promoMessage: booking.promoMessage ?? "" }));
   db.reviews = db.reviews.map((review) => {
@@ -149,6 +150,7 @@ function mapSettings(row: Record<string, unknown>): Settings {
     teamPhoto: String(row.team_photo ?? ""),
     ogImage: String(row.og_image ?? ""),
     stats: asArray(row.stats),
+    slotCapacity: Math.max(1, Number(row.slot_capacity ?? 1) || 1),
   };
 }
 
@@ -182,6 +184,7 @@ function settingsRow(settings: Settings) {
     team_photo: settings.teamPhoto,
     og_image: settings.ogImage,
     stats: settings.stats,
+    slot_capacity: settings.slotCapacity,
   };
 }
 
@@ -388,6 +391,7 @@ function mapJob(row: Record<string, unknown>): Job {
     services: String(row.services ?? ""),
     address: String(row.address ?? ""),
     scheduledDate: String(row.scheduled_date ?? ""),
+    timeWindow: String(row.time_window ?? ""),
     completedDate: String(row.completed_date ?? ""),
     price: String(row.price ?? ""),
     status: (row.status as Job["status"]) || "scheduled",
@@ -409,6 +413,7 @@ export function jobRow(job: Job) {
     services: job.services,
     address: job.address,
     scheduled_date: job.scheduledDate || null,
+    time_window: job.timeWindow,
     completed_date: job.completedDate || null,
     price: job.price,
     status: job.status,
