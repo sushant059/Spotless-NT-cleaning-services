@@ -101,39 +101,77 @@ export function bookingSheetRow(booking: Booking): SheetRow {
   };
 }
 
-/** Sends upserts and deletes for one tab. Never throws: a sheet outage must not block the site. */
-export async function syncSheet(tab: SheetTab, upsert: SheetRow[], remove: string[] = []) {
+type SheetResult = { ok: boolean; error?: string };
+
+/** Turns what the Apps Script sent back into a plain-English problem, if there is one. */
+function explain(status: number, text: string): SheetResult {
+  let body: { ok?: boolean; error?: string } | null = null;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = null;
+  }
+  if (body?.ok) return { ok: true };
+  if (body?.error === "Wrong secret") {
+    return { ok: false, error: "The secret in the Apps Script doesn't match GOOGLE_SHEETS_SECRET in Vercel. Paste the right SECRET into Code.gs, Save, then Deploy → Manage deployments → Edit → Version: New version → Deploy." };
+  }
+  if (body?.error) return { ok: false, error: `The Apps Script replied: ${body.error}` };
+  if (/<html|<!doctype/i.test(text)) {
+    return { ok: false, error: "Google returned a web page instead of running the script. In Apps Script open Deploy → Manage deployments → Edit and set “Who has access” to “Anyone” (not “Anyone with Google account”), then deploy a new version." };
+  }
+  return { ok: false, error: `The sheet script didn't answer properly (HTTP ${status}). Check that GOOGLE_SHEETS_WEBHOOK_URL is the Web app URL ending in /exec.` };
+}
+
+async function post(payload: Record<string, unknown>): Promise<SheetResult> {
   const url = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
   const secret = process.env.GOOGLE_SHEETS_SECRET;
-  if (!url || !secret) return false;
-  if (!upsert.length && !remove.length) return true;
+  if (!url || !secret) return { ok: false, error: "Google Sheets isn't connected yet." };
   try {
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ secret, tab, upsert, delete: remove }),
+      body: JSON.stringify({ secret, ...payload }),
       redirect: "follow",
-      signal: AbortSignal.timeout(10_000),
+      // Apps Script can take 10–20 seconds to wake up when it hasn't run for a while.
+      signal: AbortSignal.timeout(30_000),
     });
-    const result = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
-    if (!response.ok || !result?.ok) {
-      console.error("Google Sheets sync failed", tab, response.status, result?.error);
-      return false;
-    }
-    return true;
+    const result = explain(response.status, await response.text());
+    if (!result.ok) console.error("Google Sheets sync failed", payload.tab, result.error);
+    return result;
   } catch (error) {
-    console.error("Google Sheets sync failed", tab, error);
-    return false;
+    const timedOut = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+    console.error("Google Sheets sync failed", payload.tab, error);
+    return { ok: false, error: timedOut ? "The sheet script took too long to answer. Try again in a minute." : "Couldn't reach the sheet script. Check the Web app URL." };
   }
 }
 
+/** Sends upserts and deletes for one tab. Never throws: a sheet outage must not block the site. */
+export async function syncSheet(tab: SheetTab, upsert: SheetRow[], remove: string[] = []) {
+  if (!sheetsEnabled()) return false;
+  if (!upsert.length && !remove.length) return true;
+  return (await post({ tab, upsert, delete: remove })).ok;
+}
+
+/** Checks the script answers and accepts our secret, without changing the sheet. */
+export async function testSheetConnection() {
+  return post({ tab: "Customers", upsert: [], delete: [] });
+}
+
 /** Pushes every customer, job, lead and booking. Used by the "Sync everything now" button. */
-export async function syncEverything(db: Database) {
-  const results = await Promise.all([
-    syncSheet("Customers", db.customers.map((customer) => customerSheetRow(customer, db.jobs))),
-    syncSheet("Jobs", db.jobs.map((job) => jobSheetRow(job, db.customers))),
-    syncSheet("Leads", db.leads.map(leadSheetRow)),
-    syncSheet("Bookings", db.bookings.map(bookingSheetRow)),
-  ]);
-  return results.every(Boolean);
+export async function syncEverything(db: Database): Promise<SheetResult> {
+  const check = await testSheetConnection();
+  if (!check.ok) return check;
+  // One tab at a time: the script handles one request at a time anyway.
+  const tabs: [SheetTab, SheetRow[]][] = [
+    ["Customers", db.customers.map((customer) => customerSheetRow(customer, db.jobs))],
+    ["Jobs", db.jobs.map((job) => jobSheetRow(job, db.customers))],
+    ["Leads", db.leads.map(leadSheetRow)],
+    ["Bookings", db.bookings.map(bookingSheetRow)],
+  ];
+  for (const [tab, rows] of tabs) {
+    if (!rows.length) continue;
+    const result = await post({ tab, upsert: rows, delete: [] });
+    if (!result.ok) return result;
+  }
+  return { ok: true };
 }

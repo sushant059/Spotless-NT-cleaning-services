@@ -31,7 +31,7 @@ export function DataStatus({ supabase, sheets }: { supabase: boolean; sheets: bo
           <Button type="button" size="sm" variant="outline" className="mt-3" disabled={pending} onClick={() => start(async () => {
             const result = await syncSheetsAction();
             toast(result.ok ? result.message || "Synced" : result.error, result.ok ? "ok" : "error");
-          })}>{pending ? "Syncing…" : "Sync everything now"}</Button>
+          })}>{pending ? "Testing & syncing…" : "Test connection & sync everything"}</Button>
         )}
       </div>
     </section>

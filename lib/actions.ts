@@ -848,10 +848,8 @@ function jobReference(existing: string[]) {
 
 async function syncCustomerSheets(db: Database, customerIds: string[], jobIds: string[] = [], removed: { customers?: string[]; jobs?: string[] } = {}) {
   if (!sheetsEnabled()) return;
-  await Promise.all([
-    syncSheet("Customers", db.customers.filter((item) => customerIds.includes(item.id)).map((item) => customerSheetRow(item, db.jobs)), removed.customers ?? []),
-    syncSheet("Jobs", db.jobs.filter((item) => jobIds.includes(item.id)).map((item) => jobSheetRow(item, db.customers)), removed.jobs ?? []),
-  ]);
+  await syncSheet("Customers", db.customers.filter((item) => customerIds.includes(item.id)).map((item) => customerSheetRow(item, db.jobs)), removed.customers ?? []);
+  await syncSheet("Jobs", db.jobs.filter((item) => jobIds.includes(item.id)).map((item) => jobSheetRow(item, db.customers)), removed.jobs ?? []);
 }
 
 const customerSchema = z.object({
@@ -1054,6 +1052,8 @@ export async function syncSheetsAction(): Promise<ActionResult> {
   const auth = await guard();
   if (!auth.ok) return auth;
   if (!sheetsEnabled()) return { ok: false, error: "Google Sheets isn't connected yet. Add GOOGLE_SHEETS_WEBHOOK_URL and GOOGLE_SHEETS_SECRET in Vercel." };
-  const ok = await syncEverything(await getDb());
-  return ok ? { ok: true, message: "Google Sheet updated." } : { ok: false, error: "The sheet didn't accept the update. Check the Apps Script deployment and secret." };
+  const db = await getDb();
+  const result = await syncEverything(db);
+  if (!result.ok) return { ok: false, error: result.error || "The sheet didn't accept the update." };
+  return { ok: true, message: `Google Sheet updated: ${db.customers.length} customers, ${db.jobs.length} jobs, ${db.leads.length} leads, ${db.bookings.length} bookings.` };
 }
