@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { submitBooking } from "@/lib/actions";
+import { checkPromoAction, submitBooking } from "@/lib/actions";
 import { SERVICE_FIELDS, SERVICE_TITLES, TIME_WINDOWS, defaultDetails, summariseJob, timeWindowLabel, validateDetails } from "@/lib/constants";
 import { bookingSchema, type BookingInput } from "@/lib/validators";
 import { Button } from "@/components/ui/button";
@@ -32,9 +32,22 @@ export function BookingForm({ services, areas, blocked, settings, initialService
       phone: "",
       email: "",
       notes: "",
+      promo: "",
       company_website: "",
     },
   });
+  const [promoStatus, setPromoStatus] = useState<{ ok: boolean; message: string } | null>(null);
+  const [checkingPromo, setCheckingPromo] = useState(false);
+  const [confirmedPromo, setConfirmedPromo] = useState("");
+
+  async function checkPromo() {
+    const code = form.getValues("promo").trim();
+    if (!code) return setPromoStatus(null);
+    setCheckingPromo(true);
+    const result = await checkPromoAction(code);
+    setCheckingPromo(false);
+    setPromoStatus({ ok: result.ok, message: result.message });
+  }
   const values = form.watch();
   const summary = useMemo(() => summariseJob(values.services, values.details), [values.services, values.details]);
   const today = darwinISODate();
@@ -64,8 +77,10 @@ export function BookingForm({ services, areas, blocked, settings, initialService
     }
     if (step === 3 && (values.address.trim().length < 5 || values.suburb.trim().length < 2)) return setError("Enter the street address and suburb.");
     if (step === 4) {
-      form.trigger(["name", "phone", "email"]).then((valid) => {
+      form.trigger(["name", "phone", "email"]).then(async (valid) => {
         if (!valid) return;
+        // Check a typed promo code before the review step, so the customer knows if it's valid.
+        if (form.getValues("promo").trim() && !promoStatus) await checkPromo();
         setStep(5);
       });
       return;
@@ -79,6 +94,7 @@ export function BookingForm({ services, areas, blocked, settings, initialService
       setError(result.error);
       return;
     }
+    setConfirmedPromo(result.message || "");
     setReference(result.reference || "");
   }
 
@@ -87,6 +103,7 @@ export function BookingForm({ services, areas, blocked, settings, initialService
       <div className="rounded-card bg-white p-6 shadow-card" role="status">
         <h2 className="text-3xl font-bold">Request received</h2>
         <p className="mt-3">Thanks {values.name}. Your reference is <strong>{reference}</strong>.</p>
+        {confirmedPromo && <p className="mt-2 rounded-2xl bg-leaf-soft p-3 font-semibold text-leaf-dark">✅ Promo code applied: {confirmedPromo}</p>}
         <p className="mt-2 text-slate">{"We'll call to confirm the time and the fixed price. The clean is not locked in until we speak with you."}</p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <Button type="button" variant="outline" onClick={() => navigator.clipboard.writeText(reference)}>Copy reference</Button>
@@ -164,6 +181,14 @@ export function BookingForm({ services, areas, blocked, settings, initialService
           <div><Label htmlFor="booking-phone">Phone</Label><Input id="booking-phone" autoComplete="tel" {...form.register("phone")} /><FieldError message={form.formState.errors.phone?.message} /></div>
           <div><Label htmlFor="booking-email">Email</Label><Input id="booking-email" type="email" autoComplete="email" {...form.register("email")} /><FieldError message={form.formState.errors.email?.message} /></div>
           <div><Label htmlFor="booking-notes">Access notes (optional)</Label><Textarea id="booking-notes" {...form.register("notes")} /></div>
+          <div>
+            <Label htmlFor="booking-promo">Promo code (optional)</Label>
+            <div className="flex gap-2">
+              <Input id="booking-promo" autoComplete="off" className="uppercase" {...form.register("promo", { onChange: () => setPromoStatus(null) })} />
+              <Button type="button" variant="outline" size="sm" className="shrink-0" disabled={checkingPromo} onClick={checkPromo}>{checkingPromo ? "Checking…" : "Check"}</Button>
+            </div>
+            {promoStatus?.message && <p className={cn("mt-2 text-sm font-semibold", promoStatus.ok ? "text-leaf-dark" : "text-danger")} role="status">{promoStatus.ok ? "✅ " : ""}{promoStatus.message}</p>}
+          </div>
         </div>
       )}
       {step === 5 && (
@@ -173,6 +198,11 @@ export function BookingForm({ services, areas, blocked, settings, initialService
           <p><strong>Where. </strong>{values.address}, {values.suburb}</p>
           <p><strong>Contact. </strong>{values.name}, {values.phone}, {values.email}</p>
           {values.notes && <p><strong>Notes. </strong>{values.notes}</p>}
+          {values.promo.trim() && (
+            <p><strong>Promo code. </strong>{values.promo.trim().toUpperCase()}{" "}
+              {promoStatus && <span className={promoStatus.ok ? "font-semibold text-leaf-dark" : "font-semibold text-danger"}>({promoStatus.ok ? promoStatus.message : `${promoStatus.message} It won’t be applied.`})</span>}
+            </p>
+          )}
           <p className="text-slate">{"We'll call to confirm. Sending this request does not lock the time until we say so."}</p>
         </div>
       )}

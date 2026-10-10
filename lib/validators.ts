@@ -67,6 +67,7 @@ export const bookingSchema = z.object({
   phone: auPhone,
   email: z.string().trim().email("Enter a valid email address").max(120),
   notes: z.string().trim().max(2000),
+  promo: z.string().trim().max(40),
   company_website: z.string(),
 });
 

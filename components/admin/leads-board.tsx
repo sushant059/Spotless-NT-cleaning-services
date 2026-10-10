@@ -115,6 +115,7 @@ function BookingCard({ booking }: { booking: Booking }) {
       </div>
       <p className="mt-3 whitespace-pre-wrap text-sm">{booking.summary}</p>
       <p className="mt-2 text-sm">{booking.address}</p>
+      {booking.promoCode && <p className="mt-2 inline-flex rounded-full bg-leaf-soft px-3 py-1 text-sm font-semibold text-leaf-dark">Promo {booking.promoCode}: {booking.promoMessage}</p>}
       <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold">
         <a className="text-brand" href={`tel:${booking.phone}`}>Call</a>
         <a className="text-brand" href={waLink(booking.phone, `Hi ${booking.name}, it's Spotless NT about ${booking.reference}.`)}>WhatsApp</a>

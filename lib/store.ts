@@ -98,6 +98,7 @@ export function normalizeDb(db: Database): Database {
     duration: service.duration ?? "",
     gallery: Array.isArray(service.gallery) ? service.gallery : [],
   }));
+  db.bookings = db.bookings.map((booking) => ({ ...booking, promoCode: booking.promoCode ?? "", promoMessage: booking.promoMessage ?? "" }));
   db.reviews = db.reviews.map((review) => {
     const legacy = review as Review & { visible?: boolean };
     return {
@@ -392,6 +393,8 @@ function mapBooking(row: Record<string, unknown>): Booking {
     suburb: String(row.suburb ?? ""),
     notes: String(row.notes ?? ""),
     internalNotes: String(row.internal_notes ?? ""),
+    promoCode: String(row.promo_code ?? ""),
+    promoMessage: String(row.promo_message ?? ""),
     createdAt: String(row.created_at),
   };
 }
@@ -413,6 +416,8 @@ function bookingRow(booking: Booking) {
     suburb: booking.suburb,
     notes: booking.notes,
     internal_notes: booking.internalNotes,
+    promo_code: booking.promoCode,
+    promo_message: booking.promoMessage,
     created_at: booking.createdAt,
   };
 }

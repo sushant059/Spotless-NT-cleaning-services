@@ -146,6 +146,8 @@ create table if not exists public.bookings (
   suburb text not null,
   notes text not null default '',
   internal_notes text not null default '',
+  promo_code text not null default '',
+  promo_message text not null default '',
   created_at timestamptz not null default now()
 );
 
@@ -208,6 +210,8 @@ alter table public.services add column if not exists gallery jsonb not null defa
 alter table public.reviews add column if not exists status text not null default 'approved';
 alter table public.reviews add column if not exists email text not null default '';
 alter table public.reviews add column if not exists suburb text not null default '';
+alter table public.bookings add column if not exists promo_code text not null default '';
+alter table public.bookings add column if not exists promo_message text not null default '';
 alter table public.reviews drop constraint if exists reviews_source_check;
 alter table public.reviews add constraint reviews_source_check check (source in ('sample', 'manual', 'google', 'customer'));
 alter table public.reviews drop constraint if exists reviews_status_check;

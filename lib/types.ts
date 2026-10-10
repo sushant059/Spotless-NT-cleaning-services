@@ -128,6 +128,8 @@ export type Booking = {
   suburb: string;
   notes: string;
   internalNotes: string;
+  promoCode: string;
+  promoMessage: string;
   createdAt: string;
 };
 

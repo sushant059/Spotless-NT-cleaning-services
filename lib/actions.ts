@@ -345,8 +345,11 @@ export async function submitBooking(input: unknown): Promise<ActionResult> {
   const phone = normalizeAuPhone(parsed.data.phone) || parsed.data.phone;
   const summary = summariseJob(services, parsed.data.details).join("\n");
   let reference = "";
+  let promoMessage = "";
   await updateDb((next) => {
     reference = uniqueReference([...next.leads.map((lead) => lead.reference), ...next.bookings.map((item) => item.reference)]);
+    const promo = applyPromo(next, parsed.data.promo);
+    promoMessage = promo.message;
     const booking: Booking = {
       id: uid("book"),
       reference,
@@ -363,6 +366,8 @@ export async function submitBooking(input: unknown): Promise<ActionResult> {
       suburb: parsed.data.suburb,
       notes: parsed.data.notes,
       internalNotes: "",
+      promoCode: promo.code,
+      promoMessage,
       createdAt: new Date().toISOString(),
     };
     next.bookings.unshift(booking);
@@ -375,11 +380,11 @@ export async function submitBooking(input: unknown): Promise<ActionResult> {
     email: parsed.data.email,
     suburb: parsed.data.suburb,
     summary,
-    message: parsed.data.notes,
+    message: [parsed.data.notes, promoMessage && `Promo code: ${parsed.data.promo.toUpperCase()} — ${promoMessage}`].filter(Boolean).join("\n"),
     extra: `${parsed.data.date} · ${timeWindowLabel(parsed.data.timeWindow)} · ${parsed.data.address}`,
   }, { email: parsed.data.email, name: parsed.data.name, kind: "booking request", reference });
   refresh();
-  return { ok: true, reference, emailed };
+  return { ok: true, reference, emailed, message: promoMessage };
 }
 
 const optionalUrl = z.string().trim().max(300).refine((value) => value === "" || /^https?:\/\/.+/i.test(value), "Enter a full http or https link, or leave it blank.");
