@@ -7,14 +7,15 @@ import { z } from "zod";
 import { clearSession, devAdminPassword, getSession, setSession } from "@/lib/auth";
 import { getBotReply } from "@/lib/bot";
 import { SERVICE_CATEGORY_IDS, summariseJob, timeWindowLabel, validateDetails } from "@/lib/constants";
-import { customerEmail, ownerLeadEmail, sendMail } from "@/lib/email";
+import { customerEmail, offerEmail, ownerLeadEmail, sendMail, sendMailEach } from "@/lib/email";
+import { sendSms } from "@/lib/sms";
 import { rateLimit } from "@/lib/rate-limit";
 import { seedDatabase } from "@/lib/seed";
 import { getDb, storeMediaFile, supabaseAnon, updateDb, usingSupabase } from "@/lib/store";
 import type { ActionResult, Booking, Customer, Database, DetailValue, Faq, Job, Lead, Offer, Promo, ResultPair, Review, Service, Settings } from "@/lib/types";
 import { cancelRequestFor, linkEnquiry } from "@/lib/crm";
 import { dayAvailability, isSlotFull, slotOccupants } from "@/lib/schedule";
-import { bookingSheetRow, customerSheetRow, jobSheetRow, leadSheetRow, sheetsEnabled, syncEverything, syncSheet } from "@/lib/sheets";
+import { bookingSheetRow, customerSheetChanges, jobSheetRow, leadSheetRow, sheetsEnabled, syncEverything, syncSheet } from "@/lib/sheets";
 import { byOrder, darwinISODate, escapeHtml, slugify, uid, uniqueReference } from "@/lib/utils";
 import {
   bookingSchema,
@@ -881,7 +882,8 @@ function jobReference(existing: string[]) {
 
 async function syncCustomerSheets(db: Database, customerIds: string[], jobIds: string[] = [], removed: { customers?: string[]; jobs?: string[] } = {}) {
   if (!sheetsEnabled()) return;
-  await syncSheet("Customers", db.customers.filter((item) => customerIds.includes(item.id)).map((item) => customerSheetRow(item, db.jobs)), removed.customers ?? []);
+  const customers = customerSheetChanges(db, customerIds);
+  await syncSheet("Customers", customers.upsert, [...customers.remove, ...(removed.customers ?? [])]);
   await syncSheet("Jobs", db.jobs.filter((item) => jobIds.includes(item.id)).map((item) => jobSheetRow(item, db.customers)), removed.jobs ?? []);
 }
 
@@ -905,12 +907,18 @@ export async function saveCustomerAction(customer: Customer): Promise<ActionResu
   if (parsed.data.type === "company" && parsed.data.companyName.length < 2) return { ok: false, error: "Add the company name." };
   const phone = parsed.data.phone ? normalizeAuPhone(parsed.data.phone) || parsed.data.phone : "";
   const id = customer.id || uid("cust");
+  let duplicate: Customer | undefined;
   const saved = await updateDb((db) => {
+    // The same person (same name and phone) is never added twice; their new jobs go on the one record.
+    const key = (item: { name: string; phone: string }) => `${item.phone.replace(/\D/g, "")}|${item.name.trim().toLowerCase().replace(/\s+/g, " ")}`;
+    if (phone) duplicate = db.customers.find((item) => item.id !== id && key(item) === key({ name: parsed.data.name, phone }));
+    if (duplicate) return;
     const index = db.customers.findIndex((item) => item.id === id);
     const next: Customer = { ...parsed.data, phone, id, createdAt: index >= 0 ? db.customers[index].createdAt : nowIso(), updatedAt: nowIso() };
     if (index >= 0) db.customers[index] = next;
     else db.customers.unshift(next);
   });
+  if (duplicate) return { ok: false, id: duplicate.id, error: `${duplicate.name} with this phone number is already a customer. Add the new job to their record instead.` };
   await syncCustomerSheets(saved, [id]);
   revalidatePath("/admin", "layout");
   return { ok: true, id, message: "Customer saved." };
@@ -1029,7 +1037,63 @@ export async function convertToCustomerAction(kind: "lead" | "booking", id: stri
   return { ok: true, id: linked.customerId, message: "Job confirmed." };
 }
 
-export async function logCampaignAction(input: { title: string; message: string; channel: "whatsapp" | "sms"; recipientIds: string[] }): Promise<ActionResult> {
+const firstName = (name: string) => name.trim().split(/\s+/)[0] || "there";
+const personalise = (text: string, customer: Customer) => text.replace(/\{name\}/gi, firstName(customer.name));
+
+/** Sends an offer straight from the website by email (Gmail/Resend) or text (ClickSend), and records it. */
+export async function sendOfferAction(input: { title: string; subject: string; message: string; channel: "email" | "sms"; recipientIds: string[] }): Promise<ActionResult & { sentIds?: string[] }> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  if (input.message.trim().length < 5) return { ok: false, error: "Write the message first." };
+  const db = await getDb();
+  // Only customers who agreed to receive offers (Spam Act 2003).
+  const people = db.customers.filter((item) => item.marketingOptIn && input.recipientIds.includes(item.id) && (input.channel === "email" ? item.email : item.phone));
+  if (!people.length) return { ok: false, error: "Choose at least one customer who agreed to offers and has " + (input.channel === "email" ? "an email address." : "a phone number.") };
+  if (people.length > 200) return { ok: false, error: "Send to 200 people or fewer at a time." };
+  let sentIds: string[] = [];
+  let error: string | undefined;
+  if (input.channel === "email") {
+    const subject = input.subject.trim().slice(0, 150) || input.title.trim() || `An offer from ${db.settings.shortName}`;
+    const result = await sendMailEach(people.map((person) => ({ to: person.email, replyTo: db.settings.email, ...offerEmail(db.settings, { subject, message: personalise(input.message.trim(), person) }) })));
+    sentIds = people.filter((person) => !result.failed.includes(person.email)).map((person) => person.id);
+    error = result.error;
+  } else {
+    const body = (person: Customer) => {
+      const text = personalise(input.message.trim(), person);
+      return /stop/i.test(text) ? text : `${text}\nReply STOP to opt out.`;
+    };
+    const result = await sendSms(people.map((person) => ({ id: person.id, to: person.phone, body: body(person).slice(0, 640) })));
+    sentIds = result.sent;
+    error = result.error;
+  }
+  if (sentIds.length) {
+    await updateDb((next) => {
+      next.campaigns.unshift({ id: uid("camp"), title: input.title.trim().slice(0, 120) || input.subject.trim().slice(0, 120) || "Offer", message: input.message.trim().slice(0, 1000), channel: input.channel, recipientIds: sentIds, createdAt: nowIso() });
+    });
+    revalidatePath("/admin", "layout");
+  }
+  if (!sentIds.length) return { ok: false, error: error || "Nothing was sent." };
+  const what = input.channel === "email" ? "email" : "text";
+  const message = `Sent ${sentIds.length} ${what}${sentIds.length === 1 ? "" : "s"}.${error ? ` ${people.length - sentIds.length} didn't go: ${error}` : ""}`;
+  return { ok: true, message, sentIds };
+}
+
+/** Records that a customer agreed (or no longer agrees) to receive offers. */
+export async function setOfferConsentAction(id: string, agreed: boolean): Promise<ActionResult> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  await updateDb((db) => {
+    const customer = db.customers.find((item) => item.id === id);
+    if (customer) {
+      customer.marketingOptIn = agreed;
+      customer.updatedAt = nowIso();
+    }
+  });
+  revalidatePath("/admin", "layout");
+  return { ok: true, message: agreed ? "Marked as agreed to receive offers." : "Removed from offers." };
+}
+
+export async function logCampaignAction(input: { title: string; message: string; channel: "whatsapp" | "sms" | "email"; recipientIds: string[] }): Promise<ActionResult> {
   const auth = await guard();
   if (!auth.ok) return auth;
   if (input.message.trim().length < 5) return { ok: false, error: "Write the message first." };

@@ -225,7 +225,7 @@ export type Campaign = {
   id: string;
   title: string;
   message: string;
-  channel: "whatsapp" | "sms";
+  channel: "whatsapp" | "sms" | "email";
   recipientIds: string[];
   createdAt: string;
 };

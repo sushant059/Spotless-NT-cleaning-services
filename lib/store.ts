@@ -342,7 +342,7 @@ async function loadSupabase(sb: SupabaseClient, seedIfEmpty: boolean): Promise<D
       id: String(row.id),
       title: String(row.title ?? ""),
       message: String(row.message ?? ""),
-      channel: row.channel === "sms" ? "sms" : "whatsapp",
+      channel: row.channel === "sms" || row.channel === "email" ? row.channel : "whatsapp",
       recipientIds: asArray<string>(row.recipient_ids),
       createdAt: String(row.created_at),
     })),

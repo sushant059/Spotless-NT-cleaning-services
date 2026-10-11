@@ -125,7 +125,11 @@ export function CustomerForm({ initial, onDone }: { initial: Customer; onDone?: 
         start(async () => {
           const result = await saveCustomerAction(current);
           toast(result.ok ? result.message || "Saved" : result.error, result.ok ? "ok" : "error");
-          if (!result.ok) return;
+          if (!result.ok) {
+            // Already a customer: open their record so the job can be added there.
+            if (result.id) router.push(`/admin/customers/${result.id}`);
+            return;
+          }
           if (!initial.id && result.id) router.push(`/admin/customers/${result.id}`);
           else router.refresh();
           onDone?.(result.id || "");

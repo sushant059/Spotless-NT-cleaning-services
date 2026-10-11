@@ -341,7 +341,7 @@ create table if not exists public.campaigns (
   id text primary key,
   title text not null default '',
   message text not null,
-  channel text not null default 'whatsapp' check (channel in ('whatsapp', 'sms')),
+  channel text not null default 'whatsapp' check (channel in ('whatsapp', 'sms', 'email')),
   recipient_ids jsonb not null default '[]',
   created_at timestamptz not null default now()
 );

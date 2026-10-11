@@ -15,52 +15,67 @@ export function sheetsEnabled() {
   return Boolean(process.env.GOOGLE_SHEETS_WEBHOOK_URL && process.env.GOOGLE_SHEETS_SECRET);
 }
 
-const statusLabel = (status: string) => JOB_STATUSES.find((item) => item.id === status)?.label ?? status;
 const list = (items: string[]) => items.filter(Boolean).join("\n");
 /** "0401 647 545" stays text in Google Sheets, so the leading 0 isn't dropped. */
 const phoneText = (phone: string) => (/^0\d{9}$/.test(phone) ? `${phone.slice(0, 4)} ${phone.slice(4, 7)} ${phone.slice(7)}` : phone);
 
-export function customerSheetRow(customer: Customer, jobs: Job[]): SheetRow {
-  const theirs = jobs.filter((job) => job.customerId === customer.id);
+/** Plain-English job status for the sheet. */
+export const SHEET_STATUS: Record<string, string> = {
+  requested: "New request",
+  scheduled: "Confirmed",
+  "in-progress": "Started – in progress",
+  done: "Completed",
+  complaint: "Complaint",
+  redo: "Redo booked",
+  cancelled: "Cancelled",
+};
+const statusLabel = (status: string) => SHEET_STATUS[status] ?? JOB_STATUSES.find((item) => item.id === status)?.label ?? status;
+
+const sameKey = (customer: Customer) => `${customer.phone.replace(/\D/g, "")}|${customer.name.trim().toLowerCase().replace(/\s+/g, " ")}`;
+
+/**
+ * One sheet row per real person: customers with the same name and phone share the oldest record's row,
+ * however many jobs they have. Returns the record that represents each customer.
+ */
+export function canonicalCustomer(customer: Customer, customers: Customer[]) {
+  const key = sameKey(customer);
+  return customers.filter((item) => sameKey(item) === key).sort((x, y) => x.createdAt.localeCompare(y.createdAt))[0] ?? customer;
+}
+
+export function customerSheetRow(customer: Customer): SheetRow {
   return {
     ID: customer.id,
-    Type: customer.type === "company" ? "Company" : "Person",
-    Name: customer.name,
-    Company: customer.companyName,
+    Name: customer.companyName ? `${customer.name} (${customer.companyName})` : customer.name,
     Phone: phoneText(customer.phone),
     Email: customer.email,
-    Address: customer.address,
-    Suburb: customer.suburb,
-    "OK to send offers": customer.marketingOptIn ? "Yes" : "No",
-    Jobs: theirs.length,
-    "Last job status": theirs[0] ? statusLabel(theirs[0].status) : "",
-    Notes: customer.notes,
-    Created: customer.createdAt,
-    Updated: customer.updatedAt,
+    Address: [customer.address, customer.suburb].filter(Boolean).join(", "),
   };
+}
+
+/** Rows to write and stale duplicate rows to remove for the given customers. */
+export function customerSheetChanges(db: Database, customerIds: string[]) {
+  const upsert = new Map<string, SheetRow>();
+  const remove = new Set<string>();
+  for (const customer of db.customers.filter((item) => customerIds.includes(item.id))) {
+    const main = canonicalCustomer(customer, db.customers);
+    upsert.set(main.id, customerSheetRow(main));
+    if (main.id !== customer.id) remove.add(customer.id);
+  }
+  return { upsert: [...upsert.values()], remove: [...remove] };
 }
 
 export function jobSheetRow(job: Job, customers: Customer[]): SheetRow {
   const customer = customers.find((item) => item.id === job.customerId);
   return {
     ID: job.id,
-    Reference: job.reference,
-    Customer: customer ? customer.companyName || customer.name : "",
-    Phone: phoneText(customer?.phone ?? ""),
-    Services: job.services,
+    "Job no.": job.reference,
+    Customer: customer ? (customer.companyName ? `${customer.name} (${customer.companyName})` : customer.name) : "",
+    Job: job.services,
     Address: job.address,
-    "Scheduled date": job.scheduledDate,
-    Time: job.timeWindow ? timeWindowLabel(job.timeWindow) : "",
-    "Completed date": job.completedDate,
-    Price: job.price,
+    Date: job.scheduledDate ? `${job.scheduledDate}${job.timeWindow ? `, ${timeWindowLabel(job.timeWindow)}` : ""}` : "",
     Status: statusLabel(job.status),
-    Notes: job.notes,
-    "Before photos": list(job.beforePhotos),
-    "After photos": list(job.afterPhotos),
-    History: job.history.map((event) => `${event.at.slice(0, 16).replace("T", " ")} ${statusLabel(event.status)}${event.note ? `: ${event.note}` : ""}`).join("\n"),
-    "From enquiry": job.sourceRef,
-    Created: job.createdAt,
-    Updated: job.updatedAt,
+    Completed: job.completedDate,
+    Updated: job.updatedAt.slice(0, 16).replace("T", " "),
   };
 }
 
@@ -166,7 +181,7 @@ export async function syncEverything(db: Database): Promise<SheetResult> {
   if (!check.ok) return check;
   // One tab at a time: the script handles one request at a time anyway.
   const tabs: [SheetTab, SheetRow[]][] = [
-    ["Customers", db.customers.map((customer) => customerSheetRow(customer, db.jobs))],
+    ["Customers", customerSheetChanges(db, db.customers.map((customer) => customer.id)).upsert],
     ["Jobs", db.jobs.map((job) => jobSheetRow(job, db.customers))],
     ["Leads", db.leads.map(leadSheetRow)],
     ["Bookings", db.bookings.map(bookingSheetRow)],

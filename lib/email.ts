@@ -64,16 +64,63 @@ export function customerEmail(settings: Settings, input: { name: string; referen
   return { subject: `We received ${input.reference} — ${settings.shortName}`, html, text };
 }
 
-export async function sendMail(messages: Mail[]) {
+/** Gmail (an app password on the business Gmail) works without owning a domain, so it is preferred. */
+export function gmailEnabled() {
+  return Boolean(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
+}
+
+export function emailEnabled() {
+  return gmailEnabled() || Boolean(process.env.RESEND_API_KEY);
+}
+
+/** Sends each message separately. Returns how many went, and the first error if any failed. */
+export async function sendMailEach(messages: (Mail & { replyTo?: string })[]): Promise<{ sent: number; failed: string[]; error?: string }> {
+  const failed: string[] = [];
+  let error: string | undefined;
+  if (gmailEnabled()) {
+    const nodemailer = await import("nodemailer");
+    const transport = nodemailer.createTransport({ service: "gmail", auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD } });
+    const from = process.env.EMAIL_FROM || `Spotless NT Cleaning <${process.env.GMAIL_USER}>`;
+    for (const message of messages) {
+      try {
+        await transport.sendMail({ from, to: message.to, replyTo: message.replyTo, subject: message.subject, html: message.html, text: message.text });
+      } catch (reason) {
+        failed.push(message.to);
+        error ??= reason instanceof Error ? reason.message : String(reason);
+      }
+    }
+    return { sent: messages.length - failed.length, failed, error };
+  }
   const key = process.env.RESEND_API_KEY;
-  if (!key || !messages.length) return false;
+  if (!key) return { sent: 0, failed: messages.map((message) => message.to), error: "Email isn't set up yet." };
+  const resend = new Resend(key);
+  const from = process.env.EMAIL_FROM || "Spotless NT <onboarding@resend.dev>";
+  for (const message of messages) {
+    const result = await resend.emails.send({ from, to: message.to, replyTo: message.replyTo, subject: message.subject, html: message.html, text: message.text }).catch((reason) => ({ error: { message: String(reason) } }));
+    if (result.error) {
+      failed.push(message.to);
+      error ??= result.error.message;
+    }
+  }
+  return { sent: messages.length - failed.length, failed, error };
+}
+
+export async function sendMail(messages: Mail[]) {
+  if (!messages.length || !emailEnabled()) return false;
   try {
-    const resend = new Resend(key);
-    const from = process.env.EMAIL_FROM || "Spotless NT <onboarding@resend.dev>";
-    await Promise.all(messages.map((message) => resend.emails.send({ from, to: message.to, subject: message.subject, html: message.html, text: message.text })));
-    return true;
+    const result = await sendMailEach(messages);
+    if (result.error) console.error("Email failed", result.error);
+    return result.sent > 0;
   } catch (error) {
     console.error("Email failed", error);
     return false;
   }
+}
+
+/** An offer email: the message as paragraphs, with the business footer and an unsubscribe line. */
+export function offerEmail(settings: Settings, input: { subject: string; message: string }) {
+  const paragraphs = input.message.split(/\n{2,}|\n/).filter((line) => line.trim()).map((line) => `<p style="margin:0 0 12px">${escapeHtml(line).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>')}</p>`).join("");
+  const footer = `<p style="margin-top:20px;font-size:13px;color:#4A5D75">${escapeHtml(settings.businessName)} · ${escapeHtml(settings.phoneDisplay)} · ${escapeHtml(settings.email)}<br>Don't want offers from us? Reply with “unsubscribe” and we'll take you off the list.</p>`;
+  const text = `${input.message}\n\n${settings.businessName} · ${settings.phoneDisplay}\nReply "unsubscribe" to stop offers.`;
+  return { subject: input.subject, html: shell(settings, paragraphs + footer), text };
 }

@@ -62,6 +62,11 @@ The first run writes starter content to `data/db.json` (gitignored). Services, o
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only. Never expose it to the browser |
 | `RESEND_API_KEY` | Sends owner and customer email |
 | `EMAIL_FROM` | From address. `onboarding@resend.dev` works for Resend tests |
+| `GMAIL_USER` | Business Gmail address used to send offer emails and notifications (preferred over Resend) |
+| `GMAIL_APP_PASSWORD` | A Gmail **app password** (Google Account → Security → 2-Step Verification → App passwords), not the normal password |
+| `CLICKSEND_USERNAME` | ClickSend account username, for sending offer texts from Admin → Send offers |
+| `CLICKSEND_API_KEY` | ClickSend API key (ClickSend dashboard → API Credentials) |
+| `CLICKSEND_FROM` | Optional sender: a dedicated number or an approved name like `SpotlessNT` |
 
 If Supabase or Resend is not configured, quotes, bookings, chat and contact messages are still saved. Email sending fails quietly and the customer still gets a reference code.
 
@@ -84,6 +89,14 @@ Server actions accept uploads up to 45MB locally. On Vercel, a single request is
 ## Email
 
 Owner messages include the reference, job details and one-tap call / WhatsApp links. Customer confirmations include the reference. Chat callbacks have no customer email, so only the owner is emailed.
+
+## Sending offers
+
+Admin → Send offers lists every customer. Offers only go to customers marked “agreed to offers” (Spam Act 2003); tap “They agreed” once a customer says yes.
+
+- **Email:** with `GMAIL_USER` and `GMAIL_APP_PASSWORD` set, emails go straight from the site, one per customer, with an unsubscribe line. Gmail allows about 500 a day. Without them, the button opens your email app with everyone in BCC.
+- **Text message:** with a ClickSend account (`CLICKSEND_USERNAME`, `CLICKSEND_API_KEY`), texts go to everyone in one click (about 8–9c each, prepaid). Without it, each button opens your phone's Messages app with the text ready. “Reply STOP to opt out” is added if missing.
+- **WhatsApp:** one tap per customer; bulk WhatsApp needs a paid WhatsApp Business API account.
 
 ## Admin
 

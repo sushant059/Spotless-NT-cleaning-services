@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Menu, Phone, X } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { ServiceIcon } from "@/components/icons";
@@ -18,6 +19,8 @@ export function Header({ settings, services }: { settings: Settings; services: N
   const [open, setOpen] = useState(false);
   const [mega, setMega] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     setOpen(false);
@@ -106,21 +109,31 @@ export function Header({ settings, services }: { settings: Settings; services: N
           <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
         </button>
       </div>
-      {open && (
-        <div id="mobile-menu" className="fixed inset-x-0 bottom-0 top-[76px] z-50 overflow-y-auto bg-white xl:hidden">
-          <nav className="container-x py-6" aria-label="Mobile">
+      {/*
+        The menu is rendered into <body>: the header's backdrop blur would otherwise trap a
+        position:fixed panel inside the 76px header bar, which is why it never appeared on phones.
+      */}
+      {mounted && open && createPortal(
+        <div id="mobile-menu" className="fixed inset-0 z-[80] flex flex-col bg-white xl:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+          <div className="flex h-[76px] shrink-0 items-center justify-between gap-3 border-b border-line px-4 sm:px-6">
+            <Logo />
+            <button type="button" className="grid h-12 w-12 place-items-center rounded-full bg-navy text-white" onClick={() => setOpen(false)} aria-label="Close menu">
+              <X aria-hidden />
+            </button>
+          </div>
+          <nav className="flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-5 sm:px-6" aria-label="Mobile">
             <p className="eyebrow">Services</p>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {SERVICE_CATEGORIES.map((category) => (
                 <details key={category.id} className="group rounded-2xl border border-line bg-mist p-3 open:bg-white">
-                  <summary className="flex cursor-pointer list-none items-center gap-3 font-display font-bold text-navy">
+                  <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 font-display font-bold text-navy [&::-webkit-details-marker]:hidden">
                     <span className="grid h-9 w-9 place-items-center rounded-xl bg-white text-brand shadow-card"><ServiceIcon name={category.icon} className="h-4 w-4" /></span>
                     {category.title}
                     <ChevronDown className="ml-auto h-4 w-4 transition group-open:rotate-180" aria-hidden />
                   </summary>
                   <ul className="mt-2 grid gap-1 pl-12">
                     {services.filter((service) => service.category === category.id).map((service) => (
-                      <li key={service.slug}><Link href={`/services/${service.slug}`} className="block py-1.5 text-slate hover:text-brand">{service.title}</Link></li>
+                      <li key={service.slug}><Link href={`/services/${service.slug}`} onClick={() => setOpen(false)} className="block py-2 text-slate hover:text-brand">{service.title}</Link></li>
                     ))}
                   </ul>
                 </details>
@@ -128,17 +141,18 @@ export function Header({ settings, services }: { settings: Settings; services: N
             </div>
             <ul className="mt-6 grid gap-1 border-t border-line pt-4">
               {NAV_LINKS.filter((link) => link.href !== "/services").map((link) => (
-                <li key={link.href}><Link href={link.href} className="block rounded-2xl px-3 py-3 font-display text-xl font-bold text-navy hover:bg-brand-light">{link.label}</Link></li>
+                <li key={link.href}><Link href={link.href} onClick={() => setOpen(false)} aria-current={active(link.href) ? "page" : undefined} className={cn("block rounded-2xl px-3 py-3 font-display text-xl font-bold text-navy hover:bg-brand-light", active(link.href) && "bg-brand-light text-brand")}>{link.label}</Link></li>
               ))}
-              <li><Link href="/booking" className="block rounded-2xl px-3 py-3 font-display text-xl font-bold text-leaf-dark hover:bg-leaf-soft">Book a clean</Link></li>
+              <li><Link href="/booking" onClick={() => setOpen(false)} className="block rounded-2xl px-3 py-3 font-display text-xl font-bold text-leaf-dark hover:bg-leaf-soft">Book a clean</Link></li>
             </ul>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <Link href="/free-quote" className="inline-flex min-h-14 items-center justify-center rounded-full bg-leaf-dark font-bold text-white">Get a free quote</Link>
+              <Link href="/free-quote" onClick={() => setOpen(false)} className="inline-flex min-h-14 items-center justify-center rounded-full bg-leaf-dark font-bold text-white">Get a free quote</Link>
               <a href={`tel:${settings.phoneTel}`} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full border-2 border-navy/15 font-bold text-navy"><Phone className="h-5 w-5" aria-hidden /> {settings.phoneDisplay}</a>
             </div>
             <SocialIcons settings={settings} tone="dark" className="mt-6" />
           </nav>
-        </div>
+        </div>,
+        document.body,
       )}
     </header>
   );
