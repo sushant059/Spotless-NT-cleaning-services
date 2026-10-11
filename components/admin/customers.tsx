@@ -12,7 +12,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input, Label, Select, Textarea } from "@/components/ui/fields";
 import { useToast } from "@/components/ui/toaster";
 import { JOB_STATUSES, TIME_WINDOWS, timeWindowLabel } from "@/lib/constants";
-import type { Customer, Job, JobStatus } from "@/lib/types";
+import type { Customer, Invoice, Job, JobStatus } from "@/lib/types";
+import { Receipt } from "lucide-react";
 import { cn, formatDisplayDate, formatDisplayDateTime, waLink } from "@/lib/utils";
 
 export function emptyCustomer(): Customer {
@@ -211,7 +212,7 @@ function Info({ label, value }: { label: string; value: string }) {
 
 /* ----------------------------------- Jobs ---------------------------------- */
 
-export function JobsPanel({ customer, jobs }: { customer: Customer; jobs: Job[] }) {
+export function JobsPanel({ customer, jobs, invoices = [] }: { customer: Customer; jobs: Job[]; invoices?: Invoice[] }) {
   const [adding, setAdding] = useState(jobs.length === 0);
   return (
     <section className="space-y-4">
@@ -220,12 +221,12 @@ export function JobsPanel({ customer, jobs }: { customer: Customer; jobs: Job[] 
         <Button type="button" size="sm" onClick={() => setAdding((value) => !value)}><Plus className="h-4 w-4" aria-hidden /> New job</Button>
       </div>
       {adding && <JobForm initial={emptyJob(customer)} onDone={() => setAdding(false)} />}
-      {jobs.map((job) => <JobCard key={job.id} job={job} />)}
+      {jobs.map((job) => <JobCard key={job.id} job={job} invoice={invoices.find((item) => item.jobId === job.id && item.status !== "void")} />)}
     </section>
   );
 }
 
-function JobCard({ job }: { job: Job }) {
+function JobCard({ job, invoice }: { job: Job; invoice?: Invoice }) {
   const router = useRouter();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
@@ -274,6 +275,11 @@ function JobCard({ job }: { job: Job }) {
           {(job.status === "complaint" || job.status === "done") && <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => move("redo", "Redo booked")}>Book redo</Button>}
           {job.status !== "cancelled" && job.status !== "done" && <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => move("cancelled")}>Cancel job</Button>}
           {note.trim() && <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => move(job.status)}>Add note only</Button>}
+          {invoice ? (
+            <Link href={`/admin/invoices/${invoice.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-leaf-soft px-4 text-sm font-semibold text-leaf-dark"><Receipt className="h-4 w-4" aria-hidden /> Invoice {invoice.number}{invoice.status === "paid" ? " · paid" : ""}</Link>
+          ) : (
+            <Link href={`/admin/invoices/new?job=${job.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-full border-2 border-navy/15 px-4 text-sm font-semibold text-navy hover:border-brand"><Receipt className="h-4 w-4" aria-hidden /> Create invoice</Link>
+          )}
         </div>
       </div>
 

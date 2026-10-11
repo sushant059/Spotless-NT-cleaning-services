@@ -78,7 +78,7 @@ function Sofa({ clean, fabric }: { clean: boolean; fabric: string }) {
   );
 }
 
-export function SceneArt({ scene, clean, alt }: { scene: string; clean: boolean; alt: string }) {
+export function SceneArt({ scene, clean, alt, label = true }: { scene: string; clean: boolean; alt: string; label?: boolean }) {
   const key = /couch|sofa/.test(scene)
     ? "couch"
     : /uphol|chair/.test(scene)
@@ -178,7 +178,7 @@ export function SceneArt({ scene, clean, alt }: { scene: string; clean: boolean;
           {!clean && <path d="M80 380 q20 -10 40 0 M300 420 q20 -10 40 0 M480 400 q20 -10 40 0" stroke="#ffffff" strokeWidth="4" fill="none" opacity=".7" />}
         </Room>
       )}
-      <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-slate">Illustrative</span>
+      {label && <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-slate">Illustrative</span>}
     </div>
   );
 }

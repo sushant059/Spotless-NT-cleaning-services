@@ -7,6 +7,8 @@ import type {
   BlockedDate,
   Booking,
   Customer,
+  Invoice,
+  InvoiceItem,
   Job,
   Database,
   Faq,
@@ -104,6 +106,8 @@ export function normalizeDb(db: Database): Database {
   db.jobs = Array.isArray(db.jobs) ? db.jobs.map((job) => ({ ...job, timeWindow: job.timeWindow ?? "" })) : [];
   db.settings.slotCapacity = Math.max(1, Number(db.settings.slotCapacity) || 1);
   db.campaigns = Array.isArray(db.campaigns) ? db.campaigns : [];
+  db.invoices = Array.isArray(db.invoices) ? db.invoices : [];
+  db.settings.invoice = { ...fresh.settings.invoice, ...(db.settings.invoice ?? {}) };
   db.bookings = db.bookings.map((booking) => ({ ...booking, promoCode: booking.promoCode ?? "", promoMessage: booking.promoMessage ?? "" }));
   db.reviews = db.reviews.map((review) => {
     const legacy = review as Review & { visible?: boolean };
@@ -151,6 +155,7 @@ function mapSettings(row: Record<string, unknown>): Settings {
     ogImage: String(row.og_image ?? ""),
     stats: asArray(row.stats),
     slotCapacity: Math.max(1, Number(row.slot_capacity ?? 1) || 1),
+    invoice: (row.invoice_settings && typeof row.invoice_settings === "object" ? row.invoice_settings : {}) as Settings["invoice"],
   };
 }
 
@@ -185,6 +190,7 @@ function settingsRow(settings: Settings) {
     og_image: settings.ogImage,
     stats: settings.stats,
     slot_capacity: settings.slotCapacity,
+    invoice_settings: settings.invoice,
   };
 }
 
@@ -248,7 +254,7 @@ async function loadSupabase(sb: SupabaseClient, seedIfEmpty: boolean): Promise<D
     await syncSupabase(sb, null, seedDatabase());
     return loadSupabase(sb, false);
   }
-  const [services, offers, promos, leads, bookings, results, reviews, faqs, blocked, media, customers, jobs, campaigns] = await Promise.all([
+  const [services, offers, promos, leads, bookings, results, reviews, faqs, blocked, media, customers, jobs, campaigns, invoices] = await Promise.all([
     expect(await sb.from("services").select("*")),
     expect(await sb.from("offers").select("*")),
     expect(await sb.from("promo_codes").select("*")),
@@ -262,6 +268,7 @@ async function loadSupabase(sb: SupabaseClient, seedIfEmpty: boolean): Promise<D
     expect(await sb.from("customers").select("*").order("created_at", { ascending: false })),
     expect(await sb.from("jobs").select("*").order("created_at", { ascending: false })),
     expect(await sb.from("campaigns").select("*").order("created_at", { ascending: false })),
+    expect(await sb.from("invoices").select("*").order("created_at", { ascending: false })),
   ]);
   return normalizeDb({
     version: 1,
@@ -346,7 +353,48 @@ async function loadSupabase(sb: SupabaseClient, seedIfEmpty: boolean): Promise<D
       recipientIds: asArray<string>(row.recipient_ids),
       createdAt: String(row.created_at),
     })),
+    invoices: (invoices as Record<string, unknown>[]).map(mapInvoice),
   });
+}
+
+function mapInvoice(row: Record<string, unknown>): Invoice {
+  return {
+    id: String(row.id),
+    number: String(row.number ?? ""),
+    token: String(row.token ?? ""),
+    customerId: String(row.customer_id ?? ""),
+    jobId: String(row.job_id ?? ""),
+    issueDate: String(row.issue_date ?? ""),
+    dueDate: String(row.due_date ?? ""),
+    items: asArray<InvoiceItem>(row.items).map((item) => ({ description: String(item.description ?? ""), quantity: Number(item.quantity) || 0, unitPrice: Number(item.unitPrice) || 0 })),
+    discount: Number(row.discount ?? 0) || 0,
+    notes: String(row.notes ?? ""),
+    status: (["draft", "sent", "paid", "void"].includes(String(row.status)) ? row.status : "draft") as Invoice["status"],
+    sentAt: String(row.sent_at ?? ""),
+    paidAt: String(row.paid_at ?? ""),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at ?? row.created_at),
+  };
+}
+
+export function invoiceRow(invoice: Invoice) {
+  return {
+    id: invoice.id,
+    number: invoice.number,
+    token: invoice.token,
+    customer_id: invoice.customerId,
+    job_id: invoice.jobId,
+    issue_date: invoice.issueDate || null,
+    due_date: invoice.dueDate || null,
+    items: invoice.items,
+    discount: invoice.discount,
+    notes: invoice.notes,
+    status: invoice.status,
+    sent_at: invoice.sentAt || null,
+    paid_at: invoice.paidAt || null,
+    created_at: invoice.createdAt,
+    updated_at: invoice.updatedAt,
+  };
 }
 
 function mapCustomer(row: Record<string, unknown>): Customer {
@@ -623,6 +671,7 @@ function snapshot(db: Database): Snapshot {
     "campaigns",
     db.campaigns.map((item) => ({ id: item.id, title: item.title, message: item.message, channel: item.channel, recipient_ids: item.recipientIds, created_at: item.createdAt })),
   );
+  replaceRows("invoices", db.invoices.map(invoiceRow));
   return { settings: JSON.stringify(settingsRow(db.settings)), tables };
 }
 

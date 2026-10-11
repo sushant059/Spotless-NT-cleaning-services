@@ -66,6 +66,12 @@ export function serviceStock(slug: string): StockImage[] {
   return STOCK[SERVICE_STOCK[slug] ?? "living"];
 }
 
+/** Stock photos for a before/after scene ("carpet", "couch", … or a service slug). */
+export function sceneStock(scene: string): StockImage[] {
+  const scenes: Record<string, StockKey> = { carpet: "carpetAlt", couch: "sofa", sofa: "sofa", mattress: "mattress", pet: "pet", rug: "rug", bond: "bond", upholstery: "upholstery", office: "office" };
+  return scenes[scene] ? STOCK[scenes[scene]] : serviceStock(scene);
+}
+
 export function categoryStock(id: string): StockImage[] {
   return STOCK[CATEGORY_STOCK[id] ?? "living"];
 }

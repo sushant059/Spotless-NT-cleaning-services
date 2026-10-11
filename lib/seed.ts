@@ -319,6 +319,14 @@ export function seedDatabase(): Database {
       ogImage: "",
       stats: [],
       slotCapacity: 1,
+      invoice: {
+        gstRegistered: false,
+        termsDays: 7,
+        bankAccountName: "",
+        bsb: "",
+        accountNumber: "",
+        footer: "Thanks for choosing Spotless NT Cleaning Services.",
+      },
     },
     services,
     offers: [
@@ -398,5 +406,6 @@ export function seedDatabase(): Database {
     customers: [],
     jobs: [],
     campaigns: [],
+    invoices: [],
   };
 }

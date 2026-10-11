@@ -124,3 +124,18 @@ export function offerEmail(settings: Settings, input: { subject: string; message
   const text = `${input.message}\n\n${settings.businessName} · ${settings.phoneDisplay}\nReply "unsubscribe" to stop offers.`;
   return { subject: input.subject, html: shell(settings, paragraphs + footer), text };
 }
+
+/** The email that carries an invoice: the amount, due date, bank details and a link to view or print it. */
+export function invoiceEmail(settings: Settings, input: { number: string; name: string; total: string; dueDate: string; link: string; taxInvoice: boolean; bank: string }) {
+  const kind = input.taxInvoice ? "Tax invoice" : "Invoice";
+  const html = shell(settings, `
+    <h1 style="font-size:22px;margin:0 0 12px">${kind} ${escapeHtml(input.number)}</h1>
+    <p>Hi ${escapeHtml(input.name)}, thanks for choosing ${escapeHtml(settings.shortName)}. Here is your invoice.</p>
+    <p style="font-size:20px;margin:16px 0"><strong>Amount due: ${escapeHtml(input.total)}</strong>${input.dueDate ? `<br><span style="font-size:15px">Due ${escapeHtml(input.dueDate)}</span>` : ""}</p>
+    <p><a href="${input.link}" style="display:inline-block;background:#0B2F5E;color:#ffffff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:700">View or print the invoice</a></p>
+    ${input.bank ? `<p style="margin-top:16px"><strong>Pay by bank transfer</strong><br>${escapeHtml(input.bank).replace(/\n/g, "<br>")}<br>Reference: ${escapeHtml(input.number)}</p>` : ""}
+    <p style="margin-top:16px;font-size:13px;color:#4A5D75">Questions? Call ${escapeHtml(settings.phoneDisplay)} or reply to this email.</p>
+  `);
+  const text = [`${kind} ${input.number}`, `Hi ${input.name}, here is your invoice from ${settings.shortName}.`, `Amount due: ${input.total}${input.dueDate ? `, due ${input.dueDate}` : ""}`, `View or print: ${input.link}`, input.bank ? `Pay by bank transfer:\n${input.bank}\nReference: ${input.number}` : "", `Questions? Call ${settings.phoneDisplay}.`].filter(Boolean).join("\n\n");
+  return { subject: `${kind} ${input.number} from ${settings.shortName} – ${input.total}`, html, text };
+}

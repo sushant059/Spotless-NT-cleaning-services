@@ -89,7 +89,9 @@ export function slugify(value: string) {
 }
 
 export function siteUrl() {
-  return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+  // On Vercel, fall back to the production domain so links in emails and texts never point at localhost.
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "";
+  return (process.env.NEXT_PUBLIC_SITE_URL || vercel || "http://localhost:3000").replace(/\/$/, "");
 }
 
 export function byOrder<T extends { order: number }>(items: T[]) {

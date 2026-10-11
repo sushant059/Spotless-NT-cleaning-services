@@ -62,6 +62,41 @@ export type Settings = {
   stats: TrustStat[];
   /** How many jobs can share one time slot (number of crews). */
   slotCapacity: number;
+  invoice: InvoiceSettings;
+};
+
+export type InvoiceSettings = {
+  /** Registered for GST: invoices say "Tax invoice" and show the GST included (1/11 of the total). */
+  gstRegistered: boolean;
+  /** Days until an invoice is due. */
+  termsDays: number;
+  bankAccountName: string;
+  bsb: string;
+  accountNumber: string;
+  /** Printed at the bottom of every invoice, e.g. "Thanks for choosing Spotless NT". */
+  footer: string;
+};
+
+export type InvoiceItem = { description: string; quantity: number; unitPrice: number };
+export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
+
+export type Invoice = {
+  id: string;
+  number: string;
+  /** Secret part of the customer's link to view and print the invoice. */
+  token: string;
+  customerId: string;
+  jobId: string;
+  issueDate: string;
+  dueDate: string;
+  items: InvoiceItem[];
+  discount: number;
+  notes: string;
+  status: InvoiceStatus;
+  sentAt: string;
+  paidAt: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type Offer = {
@@ -246,6 +281,7 @@ export type Database = {
   customers: Customer[];
   jobs: Job[];
   campaigns: Campaign[];
+  invoices: Invoice[];
 };
 
 export type ActionResult =

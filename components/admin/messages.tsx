@@ -33,13 +33,13 @@ function contactFor(customer: Customer, channel: Channel) {
   return channel === "email" ? customer.email : customer.phone;
 }
 
-export function MessagesComposer({ customers, offers, promos, campaigns, siteUrl, emailReady, smsReady }: { customers: Customer[]; offers: Offer[]; promos: Promo[]; campaigns: Campaign[]; siteUrl: string; emailReady: boolean; smsReady: boolean }) {
+export function MessagesComposer({ customers, offers, promos, campaigns, siteUrl, emailReady, smsReady, initial, compact = false }: { customers: Customer[]; offers: Offer[]; promos: Promo[]; campaigns: Campaign[]; siteUrl: string; emailReady: boolean; smsReady: boolean; initial?: { title: string; subject: string; message: string }; compact?: boolean }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, start] = useTransition();
-  const [title, setTitle] = useState("");
-  const [subject, setSubject] = useState("");
-  const [message, setMessage] = useState("Hi {name}, it's Spotless NT! ");
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [subject, setSubject] = useState(initial?.subject ?? "");
+  const [message, setMessage] = useState(initial?.message ?? "Hi {name}, it's Spotless NT! ");
   const [channel, setChannel] = useState<Channel>("email");
   const [selected, setSelected] = useState<string[]>([]);
   const [opened, setOpened] = useState<string[]>([]);
@@ -131,6 +131,7 @@ export function MessagesComposer({ customers, offers, promos, campaigns, siteUrl
       <section className="rounded-card bg-white p-4 shadow-card sm:p-5">
         <h2 className="text-xl font-bold text-navy">2. Write the message</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {!compact && <>
           <div>
             <Label htmlFor="m-offer">Start from an offer (optional)</Label>
             <Select id="m-offer" defaultValue="" onChange={(event) => applyOffer(event.target.value)}>
@@ -145,6 +146,7 @@ export function MessagesComposer({ customers, offers, promos, campaigns, siteUrl
               {activePromos.map((promo) => <option key={promo.id} value={promo.code}>{promo.code}</option>)}
             </Select>
           </div>
+          </>}
           {channel === "email" ? (
             <div className="sm:col-span-2"><Label htmlFor="m-subject">Email subject</Label><Input id="m-subject" value={subject} placeholder="e.g. 20% off carpet cleaning this month" onChange={(event) => setSubject(event.target.value)} /></div>
           ) : (
@@ -239,7 +241,7 @@ export function MessagesComposer({ customers, offers, promos, campaigns, siteUrl
         </section>
       )}
 
-      <section className="rounded-card bg-white p-4 shadow-card sm:p-5">
+      {!compact && <section className="rounded-card bg-white p-4 shadow-card sm:p-5">
         <h2 className="text-xl font-bold text-navy">Message history</h2>
         {campaigns.length === 0 && <p className="mt-2 text-sm text-slate">Nothing sent yet.</p>}
         <ul className="mt-3 divide-y divide-line">
@@ -251,7 +253,7 @@ export function MessagesComposer({ customers, offers, promos, campaigns, siteUrl
             </li>
           ))}
         </ul>
-      </section>
+      </section>}
     </div>
   );
 }

@@ -31,8 +31,10 @@ import { ServiceIcon } from "@/components/icons";
 import { uploadFile } from "@/components/admin/upload";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { useToast } from "@/components/ui/toaster";
-import type { Faq, MediaItem, Offer, Promo, ResultPair, Review, Service, Settings } from "@/lib/types";
-import { byOrder, uid } from "@/lib/utils";
+import type { Campaign, Customer, Faq, MediaItem, Offer, Promo, ResultPair, Review, Service, Settings } from "@/lib/types";
+import { byOrder, formatDisplayDate, uid } from "@/lib/utils";
+import { Send } from "lucide-react";
+import { MessagesComposer } from "@/components/admin/messages";
 
 function useSave() {
   const router = useRouter();
@@ -48,10 +50,43 @@ function useSave() {
   return { pending, run };
 }
 
-export function OffersEditor({ offers, promos }: { offers: Offer[]; promos: Promo[] }) {
+type SendContext = { customers: Customer[]; campaigns: Campaign[]; siteUrl: string; emailReady: boolean; smsReady: boolean };
+
+function promoDiscount(promo: Promo) {
+  return promo.type === "percent" ? `${promo.amount}% off` : `$${promo.amount} off`;
+}
+
+/** A ready-to-send message for a promo code; the admin can edit it before sending. */
+function promoInvite(promo: Promo, siteUrl: string) {
+  const until = promo.expiresAt ? ` until ${formatDisplayDate(promo.expiresAt)}` : "";
+  return {
+    title: `Promo code ${promo.code}`,
+    subject: `${promoDiscount(promo)} your next clean – code ${promo.code}`,
+    message: `Hi {name}, it's Spotless NT! Here's ${promoDiscount(promo)} your next clean with code ${promo.code}${until}. Book or get a quote: ${siteUrl}/booking`,
+  };
+}
+
+export function OffersEditor({ offers, promos, send }: { offers: Offer[]; promos: Promo[]; send?: SendContext }) {
   const { pending, run } = useSave();
+  const router = useRouter();
+  const toast = useToast();
   const [offer, setOffer] = useState<Offer | null>(null);
   const [promo, setPromo] = useState<Promo | null>(null);
+  const [sending, setSending] = useState<Promo | null>(null);
+  const [saving, startSaving] = useTransition();
+
+  function savePromo(current: Promo) {
+    const isNew = !promos.some((item) => item.id === current.id);
+    startSaving(async () => {
+      const result = await savePromoAction(current);
+      toast(result.ok ? result.message || "Saved" : result.error || "Could not save", result.ok ? "ok" : "error");
+      if (!result.ok) return;
+      router.refresh();
+      setPromo(null);
+      // A new code goes straight to "send it to customers".
+      if (isNew && send) setSending({ ...current, code: current.code.trim().toUpperCase() });
+    });
+  }
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap gap-2">
@@ -101,14 +136,24 @@ export function OffersEditor({ offers, promos }: { offers: Offer[]; promos: Prom
           <article key={item.id} className="mb-3 rounded-card bg-white p-4 shadow-card">
             <p className="font-bold">{item.code} · {item.type === "percent" ? `${item.amount}%` : `$${item.amount}`} · used {item.usedCount}{item.usageLimit != null ? ` / ${item.usageLimit}` : ""}</p>
             <p className="text-sm text-slate">{item.message}</p>
-            <div className="mt-2 flex gap-2">
+            <div className="mt-2 flex flex-wrap gap-2">
+              {send && item.active && <Button type="button" size="sm" onClick={() => setSending(sending?.id === item.id ? null : item)}><Send className="h-4 w-4" aria-hidden /> {sending?.id === item.id ? "Close" : "Email or text to customers"}</Button>}
               <Button type="button" size="sm" variant="outline" onClick={() => setPromo(item)}>Edit</Button>
               <ConfirmDialog title="Delete code?" body="People will no longer be able to use it." confirmLabel="Delete" onConfirm={() => run(() => deletePromoAction(item.id))} trigger={<Button type="button" size="sm" variant="danger">Delete</Button>} />
             </div>
           </article>
         ))}
+        {send && sending && (
+          <div className="mb-6 rounded-card border-2 border-brand/30 bg-brand-light/40 p-3 sm:p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-xl font-bold text-navy">Send code {sending.code} to customers</h3>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setSending(null)}>Close</Button>
+            </div>
+            <MessagesComposer key={sending.id} compact initial={promoInvite(sending, send.siteUrl)} customers={send.customers} campaigns={send.campaigns} offers={offers} promos={promos} siteUrl={send.siteUrl} emailReady={send.emailReady} smsReady={send.smsReady} />
+          </div>
+        )}
         {promo && (
-          <form className="grid gap-3 rounded-card bg-white p-4 shadow-card" onSubmit={(event) => { event.preventDefault(); run(() => savePromoAction(promo)); }}>
+          <form className="grid gap-3 rounded-card bg-white p-4 shadow-card" onSubmit={(event) => { event.preventDefault(); savePromo(promo); }}>
             <Label htmlFor="promo-code">Code</Label>
             <Input id="promo-code" value={promo.code} onChange={(event) => setPromo({ ...promo, code: event.target.value.toUpperCase() })} />
             <Label htmlFor="promo-type">Type</Label>
@@ -125,7 +170,8 @@ export function OffersEditor({ offers, promos }: { offers: Offer[]; promos: Prom
             <Label htmlFor="promo-limit">Usage limit (blank for none)</Label>
             <Input id="promo-limit" value={promo.usageLimit ?? ""} onChange={(event) => setPromo({ ...promo, usageLimit: event.target.value === "" ? null : Number(event.target.value) })} />
             <label className="flex gap-2"><input type="checkbox" checked={promo.active} onChange={(event) => setPromo({ ...promo, active: event.target.checked })} /> Active</label>
-            <Button type="submit" disabled={pending}>Save code</Button>
+            <Button type="submit" disabled={saving}>{promos.some((item) => item.id === promo.id) ? "Save code" : "Create code"}</Button>
+            {send && !promos.some((item) => item.id === promo.id) && <p className="text-sm text-slate">After you create it, you can email or text it to your customers straight away.</p>}
           </form>
         )}
       </div>
@@ -505,6 +551,30 @@ export function SettingsEditor({ settings, localMode }: { settings: Settings; lo
       <Group title="Bookings" note="How many jobs can happen in the same time slot. Keep 1 for one crew; set 2 if two crews work at once.">
         <label className="block text-sm font-semibold text-navy" htmlFor="slot-capacity">Jobs per time slot
           <Input id="slot-capacity" type="number" min={1} max={20} className="mt-1 font-normal" value={current.slotCapacity} onChange={(event) => set({ slotCapacity: Math.max(1, Number(event.target.value) || 1) })} />
+        </label>
+      </Group>
+
+      <Group title="Invoices" note="Shown on every invoice. Prices you type on invoices are what the customer pays.">
+        <label className="flex items-start gap-3 text-sm font-semibold text-navy">
+          <input type="checkbox" className="mt-1 h-5 w-5" checked={current.invoice.gstRegistered} onChange={(event) => set({ invoice: { ...current.invoice, gstRegistered: event.target.checked } })} />
+          <span>Registered for GST<span className="block font-normal text-slate">Invoices become “Tax invoice” and show the GST included (1/11 of the total). Needs your ABN above.</span></span>
+        </label>
+        <label className="block text-sm font-semibold text-navy" htmlFor="inv-terms">Days to pay
+          <Input id="inv-terms" type="number" min={0} max={120} className="mt-1 font-normal" value={current.invoice.termsDays} onChange={(event) => set({ invoice: { ...current.invoice, termsDays: Math.max(0, Number(event.target.value) || 0) } })} />
+        </label>
+        <label className="block text-sm font-semibold text-navy" htmlFor="inv-account-name">Bank account name
+          <Input id="inv-account-name" className="mt-1 font-normal" value={current.invoice.bankAccountName} onChange={(event) => set({ invoice: { ...current.invoice, bankAccountName: event.target.value } })} />
+        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm font-semibold text-navy" htmlFor="inv-bsb">BSB
+            <Input id="inv-bsb" inputMode="numeric" placeholder="062-000" className="mt-1 font-normal" value={current.invoice.bsb} onChange={(event) => set({ invoice: { ...current.invoice, bsb: event.target.value } })} />
+          </label>
+          <label className="block text-sm font-semibold text-navy" htmlFor="inv-account">Account number
+            <Input id="inv-account" inputMode="numeric" className="mt-1 font-normal" value={current.invoice.accountNumber} onChange={(event) => set({ invoice: { ...current.invoice, accountNumber: event.target.value } })} />
+          </label>
+        </div>
+        <label className="block text-sm font-semibold text-navy" htmlFor="inv-footer">Thank-you line at the bottom
+          <Input id="inv-footer" className="mt-1 font-normal" value={current.invoice.footer} onChange={(event) => set({ invoice: { ...current.invoice, footer: event.target.value } })} />
         </label>
       </Group>
 

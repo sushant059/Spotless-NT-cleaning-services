@@ -13,7 +13,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
     <div className="space-y-6">
       <Link href="/admin/customers" className="text-sm font-semibold text-brand">← All customers</Link>
       <CustomerHeader customer={customer} />
-      <JobsPanel customer={customer} jobs={jobs} />
+      <JobsPanel customer={customer} jobs={jobs} invoices={db.invoices.filter((item) => item.customerId === id)} />
     </div>
   );
 }

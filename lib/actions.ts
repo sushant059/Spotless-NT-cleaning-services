@@ -1,22 +1,23 @@
 "use server";
 
-import { createHash, timingSafeEqual } from "crypto";
+import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clearSession, devAdminPassword, getSession, setSession } from "@/lib/auth";
 import { getBotReply } from "@/lib/bot";
 import { SERVICE_CATEGORY_IDS, summariseJob, timeWindowLabel, validateDetails } from "@/lib/constants";
-import { customerEmail, offerEmail, ownerLeadEmail, sendMail, sendMailEach } from "@/lib/email";
+import { customerEmail, invoiceEmail, offerEmail, ownerLeadEmail, sendMail, sendMailEach } from "@/lib/email";
+import { invoiceTotals, money, nextInvoiceNumber } from "@/lib/invoice";
 import { sendSms } from "@/lib/sms";
 import { rateLimit } from "@/lib/rate-limit";
 import { seedDatabase } from "@/lib/seed";
 import { getDb, storeMediaFile, supabaseAnon, updateDb, usingSupabase } from "@/lib/store";
-import type { ActionResult, Booking, Customer, Database, DetailValue, Faq, Job, Lead, Offer, Promo, ResultPair, Review, Service, Settings } from "@/lib/types";
+import type { ActionResult, Booking, Customer, Database, DetailValue, Faq, Invoice, InvoiceStatus, Job, Lead, Offer, Promo, ResultPair, Review, Service, Settings } from "@/lib/types";
 import { cancelRequestFor, linkEnquiry } from "@/lib/crm";
 import { dayAvailability, isSlotFull, slotOccupants } from "@/lib/schedule";
 import { bookingSheetRow, customerSheetChanges, jobSheetRow, leadSheetRow, sheetsEnabled, syncEverything, syncSheet } from "@/lib/sheets";
-import { byOrder, darwinISODate, escapeHtml, slugify, uid, uniqueReference } from "@/lib/utils";
+import { byOrder, darwinISODate, escapeHtml, formatDisplayDate, siteUrl, slugify, uid, uniqueReference } from "@/lib/utils";
 import {
   bookingSchema,
   chatSchema,
@@ -462,6 +463,14 @@ const settingsSchema = z.object({
   ogImage: z.string().max(500),
   stats: z.array(z.object({ value: z.string().max(20), label: z.string().max(40) })).max(3),
   slotCapacity: z.number().int().min(1, "At least 1 job per time slot").max(20),
+  invoice: z.object({
+    gstRegistered: z.boolean(),
+    termsDays: z.number().int().min(0, "Payment terms can't be negative").max(120),
+    bankAccountName: z.string().trim().max(80),
+    bsb: z.string().trim().max(10).refine((value) => value === "" || /^\d{3}-?\d{3}$/.test(value), "BSB is 6 digits, like 062-000"),
+    accountNumber: z.string().trim().max(20).refine((value) => value === "" || /^[\d ]{5,12}$/.test(value), "Account number is 5–10 digits"),
+    footer: z.string().trim().max(300),
+  }),
 });
 
 export async function saveSettingsAction(input: Settings): Promise<ActionResult> {
@@ -469,6 +478,7 @@ export async function saveSettingsAction(input: Settings): Promise<ActionResult>
   if (!auth.ok) return auth;
   const parsed = settingsSchema.safeParse({ ...input, stats: input.stats.filter((stat) => stat.value.trim() && stat.label.trim()) });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message || "Check the settings." };
+  if (parsed.data.invoice.gstRegistered && !parsed.data.abn) return { ok: false, error: "Add your ABN to send tax invoices with GST." };
   await updateDb((db) => {
     db.settings = parsed.data;
   });
@@ -1121,4 +1131,132 @@ export async function syncSheetsAction(): Promise<ActionResult> {
   const result = await syncEverything(db);
   if (!result.ok) return { ok: false, error: result.error || "The sheet didn't accept the update." };
   return { ok: true, message: `Google Sheet updated: ${db.customers.length} customers, ${db.jobs.length} jobs, ${db.leads.length} leads, ${db.bookings.length} bookings.` };
+}
+
+// ---------- Invoices ----------
+
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a date");
+const invoiceSchema = z.object({
+  customerId: z.string().min(1, "Choose a customer"),
+  jobId: z.string(),
+  issueDate: isoDate,
+  dueDate: z.union([isoDate, z.literal("")]),
+  items: z
+    .array(z.object({
+      description: z.string().trim().min(2, "Describe each line").max(300),
+      quantity: z.number().positive("Quantity must be more than 0").max(10000),
+      unitPrice: z.number().min(0, "Prices can't be negative").max(1000000),
+    }))
+    .min(1, "Add at least one line")
+    .max(30),
+  discount: z.number().min(0, "Discount can't be negative").max(1000000),
+  notes: z.string().trim().max(1000),
+});
+
+export async function saveInvoiceAction(invoice: Invoice): Promise<ActionResult & { id?: string }> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  const parsed = invoiceSchema.safeParse(invoice);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message || "Check the invoice." };
+  if (parsed.data.dueDate && parsed.data.dueDate < parsed.data.issueDate) return { ok: false, error: "The due date is before the invoice date." };
+  const id = invoice.id || uid("inv");
+  let missing = false;
+  await updateDb((db) => {
+    if (!db.customers.some((item) => item.id === parsed.data.customerId)) {
+      missing = true;
+      return;
+    }
+    const index = db.invoices.findIndex((item) => item.id === id);
+    const previous = index >= 0 ? db.invoices[index] : null;
+    const next: Invoice = {
+      ...parsed.data,
+      id,
+      number: previous?.number || nextInvoiceNumber(db.invoices.map((item) => item.number)),
+      token: previous?.token || randomBytes(18).toString("base64url"),
+      status: previous?.status || "draft",
+      sentAt: previous?.sentAt || "",
+      paidAt: previous?.paidAt || "",
+      createdAt: previous?.createdAt || nowIso(),
+      updatedAt: nowIso(),
+    };
+    if (index >= 0) db.invoices[index] = next;
+    else db.invoices.unshift(next);
+  });
+  if (missing) return { ok: false, error: "That customer no longer exists." };
+  revalidatePath("/admin", "layout");
+  return { ok: true, id, message: "Invoice saved." };
+}
+
+export async function setInvoiceStatusAction(id: string, status: InvoiceStatus): Promise<ActionResult> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  if (!["draft", "sent", "paid", "void"].includes(status)) return { ok: false, error: "Unknown status." };
+  await updateDb((db) => {
+    const invoice = db.invoices.find((item) => item.id === id);
+    if (!invoice) return;
+    invoice.status = status;
+    if (status === "sent" && !invoice.sentAt) invoice.sentAt = nowIso();
+    invoice.paidAt = status === "paid" ? invoice.paidAt || nowIso() : "";
+    invoice.updatedAt = nowIso();
+  });
+  revalidatePath("/admin", "layout");
+  const labels = { draft: "Moved back to draft.", sent: "Marked as sent.", paid: "Marked as paid.", void: "Invoice cancelled." };
+  return { ok: true, message: labels[status] };
+}
+
+export async function deleteInvoiceAction(id: string): Promise<ActionResult> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  await updateDb((db) => {
+    db.invoices = db.invoices.filter((item) => item.id !== id);
+  });
+  revalidatePath("/admin", "layout");
+  return { ok: true, message: "Invoice deleted." };
+}
+
+/** The customer's link to view, print or save the invoice as PDF. */
+function invoiceLink(invoice: Invoice) {
+  return `${siteUrl()}/invoice/${invoice.token}`;
+}
+
+function bankLines(settings: Settings) {
+  const bank = settings.invoice;
+  return [bank.bankAccountName && `Account name: ${bank.bankAccountName}`, bank.bsb && `BSB: ${bank.bsb}`, bank.accountNumber && `Account: ${bank.accountNumber}`].filter(Boolean).join("\n");
+}
+
+/** Emails or texts the invoice link straight from the website, then marks it sent. */
+export async function sendInvoiceAction(id: string, channel: "email" | "sms"): Promise<ActionResult> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  const db = await getDb();
+  const invoice = db.invoices.find((item) => item.id === id);
+  if (!invoice) return { ok: false, error: "Invoice not found." };
+  const customer = db.customers.find((item) => item.id === invoice.customerId);
+  if (!customer) return { ok: false, error: "The customer for this invoice no longer exists." };
+  if (invoice.status === "void") return { ok: false, error: "This invoice is cancelled." };
+  const settings = db.settings;
+  const totals = invoiceTotals(invoice, settings.invoice.gstRegistered);
+  const first = customer.name.trim().split(/\s+/)[0] || "there";
+  const due = invoice.dueDate ? formatDisplayDate(invoice.dueDate) : "";
+  if (channel === "email") {
+    if (!customer.email) return { ok: false, error: "Add an email address to this customer first." };
+    const mail = invoiceEmail(settings, { number: invoice.number, name: first, total: money(totals.total), dueDate: due, link: invoiceLink(invoice), taxInvoice: settings.invoice.gstRegistered, bank: bankLines(settings) });
+    const result = await sendMailEach([{ to: customer.email, replyTo: settings.email, ...mail }]);
+    if (!result.sent) return { ok: false, error: result.error || "The email didn't send." };
+  } else {
+    if (!customer.phone) return { ok: false, error: "Add a phone number to this customer first." };
+    const body = `Hi ${first}, here's your ${settings.shortName} invoice ${invoice.number} for ${money(totals.total)}${due ? `, due ${due}` : ""}: ${invoiceLink(invoice)}`;
+    const result = await sendSms([{ id: customer.id, to: customer.phone, body }]);
+    if (!result.sent.length) return { ok: false, error: result.error || "The text didn't send." };
+  }
+  await updateDb((next) => {
+    const item = next.invoices.find((entry) => entry.id === id);
+    if (item && item.status === "draft") item.status = "sent";
+    if (item) {
+      item.sentAt = nowIso();
+      item.updatedAt = nowIso();
+    }
+  });
+  revalidatePath("/admin", "layout");
+  return { ok: true, message: `Invoice ${invoice.number} ${channel === "email" ? "emailed" : "texted"} to ${customer.name}.` };
 }

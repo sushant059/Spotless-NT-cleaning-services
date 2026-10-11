@@ -365,3 +365,28 @@ on conflict (id) do nothing;
 drop policy if exists "public read media files" on storage.objects;
 drop policy if exists "admin write media files" on storage.objects;
 create policy "admin write media files" on storage.objects for all using (bucket_id = 'media' and private.is_admin()) with check (bucket_id = 'media' and private.is_admin());
+
+-- Invoices (admin only; customers see theirs through the website's private link)
+alter table public.site_settings add column if not exists invoice_settings jsonb not null default '{}';
+
+create table if not exists public.invoices (
+  id text primary key,
+  number text not null,
+  token text not null unique,
+  customer_id text not null references public.customers(id) on delete cascade,
+  job_id text not null default '',
+  issue_date date,
+  due_date date,
+  items jsonb not null default '[]',
+  discount numeric(12, 2) not null default 0,
+  notes text not null default '',
+  status text not null default 'draft' check (status in ('draft', 'sent', 'paid', 'void')),
+  sent_at timestamptz,
+  paid_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists invoices_customer_id_idx on public.invoices (customer_id);
+alter table public.invoices enable row level security;
+drop policy if exists "admin invoices" on public.invoices;
+create policy "admin invoices" on public.invoices for all using (private.is_admin()) with check (private.is_admin());
