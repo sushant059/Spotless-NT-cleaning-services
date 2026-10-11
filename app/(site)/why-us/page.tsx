@@ -4,6 +4,7 @@ import { CheckCircle2 } from "lucide-react";
 import { CtaBand, PageHero, Pillars, SectionHeading, TeamVisual } from "@/components/content";
 import { UniformMockup } from "@/components/art/people";
 import { getDb } from "@/lib/store";
+import { STOCK } from "@/lib/stock";
 
 export const metadata: Metadata = {
   title: "About us",
@@ -15,7 +16,7 @@ export default async function WhyUsPage() {
   const s = db.settings;
   return (
     <>
-      <PageHero eyebrow="About Spotless NT" title="Cleaner spaces. Healthier lives." lede="We’re a locally owned Darwin cleaning business. We price the job before we start and tell you honestly what a clean can and can’t do." crumbs={[{ href: "/why-us", label: "About" }]} />
+      <PageHero image={STOCK.crew} eyebrow="About Spotless NT" title="Cleaner spaces. Healthier lives." lede="We’re a locally owned Darwin cleaning business. We price the job before we start and tell you honestly what a clean can and can’t do." crumbs={[{ href: "/why-us", label: "About" }]} />
       <section className="section pt-12">
         <div className="container-x grid items-center gap-12 lg:grid-cols-2">
           <TeamVisual photo={s.teamPhoto} />

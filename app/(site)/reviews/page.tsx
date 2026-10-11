@@ -3,6 +3,7 @@ import { GoogleReviewButton, PageHero, ReviewCard, Stars } from "@/components/co
 import { ReviewForm } from "@/components/forms/review-form";
 import { getDb } from "@/lib/store";
 import { byOrder, safeHttpUrl } from "@/lib/utils";
+import { STOCK } from "@/lib/stock";
 
 export const metadata: Metadata = {
   title: "Customer reviews",
@@ -17,7 +18,7 @@ export default async function ReviewsPage() {
   const googleUrl = safeHttpUrl(db.settings.google) || `https://www.google.com/maps/search/${encodeURIComponent(`${db.settings.businessName} Darwin`)}`;
   return (
     <>
-      <PageHero eyebrow="Reviews" title="Kind words from the Top End." lede="Every review is from a real customer and checked by our team before it goes live." crumbs={[{ href: "/reviews", label: "Reviews" }]}>
+      <PageHero image={STOCK.cosy} eyebrow="Reviews" title="Kind words from the Top End." lede="Every review is from a real customer and checked by our team before it goes live." crumbs={[{ href: "/reviews", label: "Reviews" }]}>
         <div className="mt-8 flex flex-wrap items-center gap-4">
           {real.length >= 3 && (
             <div className="flex items-center gap-3 rounded-full bg-white/10 px-5 py-3 ring-1 ring-white/15">

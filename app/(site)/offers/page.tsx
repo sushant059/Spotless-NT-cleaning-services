@@ -5,6 +5,7 @@ import { FadeIn } from "@/components/fade-in";
 import { getDb } from "@/lib/store";
 import { byOrder } from "@/lib/utils";
 import { isOfferLive } from "@/lib/validators";
+import { STOCK } from "@/lib/stock";
 
 export const metadata: Metadata = {
   title: "Offers & specials",
@@ -16,7 +17,7 @@ export default async function OffersPage() {
   const offers = byOrder(db.offers).filter((offer) => isOfferLive(offer));
   return (
     <>
-      <PageHero eyebrow="Offers" title="Current specials & promotions." lede="Limited-time deals for Darwin and Palmerston homes. Mention the offer or use the promo code when you book." crumbs={[{ href: "/offers", label: "Offers" }]} />
+      <PageHero image={STOCK.living} eyebrow="Offers" title="Current specials & promotions." lede="Limited-time deals for Darwin and Palmerston homes. Mention the offer or use the promo code when you book." crumbs={[{ href: "/offers", label: "Offers" }]} />
       <section className="section pt-12">
         <div className="container-x">
           {offers.length > 0 ? (

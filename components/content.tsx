@@ -1,22 +1,23 @@
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, CalendarCheck, Droplets, MapPin, PawPrint, ShieldCheck, Sparkles, Star, ThumbsUp } from "lucide-react";
-import { MediaImage } from "@/components/media-image";
+import { Photo } from "@/components/photo";
 import { FadeIn } from "@/components/fade-in";
 import { ServiceIcon } from "@/components/icons";
 import { Sparkle } from "@/components/art/sparkle";
-import { Technician } from "@/components/art/people";
 import { BrandIcon } from "@/components/social";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
+import { categoryStock, serviceStock, STOCK, type StockImage } from "@/lib/stock";
 import type { Faq, Review, Service, Settings } from "@/lib/types";
 import { cn, filled, formatDisplayDate, safeHttpUrl } from "@/lib/utils";
 
-export function PageHero({ eyebrow, title, lede, children, crumbs }: { eyebrow: string; title: string; lede: string; children?: React.ReactNode; crumbs?: { href: string; label: string }[] }) {
+export function PageHero({ eyebrow, title, lede, children, crumbs, image = STOCK.living, src }: { eyebrow: string; title: string; lede: string; children?: React.ReactNode; crumbs?: { href: string; label: string }[]; image?: StockImage[]; src?: string }) {
   return (
-    <header className="relative overflow-hidden bg-hero text-white">
-      <div className="pointer-events-none absolute inset-0 bg-grid" aria-hidden />
-      <Sparkle className="pointer-events-none absolute right-[8%] top-10 h-10 w-10 text-sky" animated />
-      <Sparkle className="pointer-events-none absolute right-[16%] top-28 h-5 w-5 text-white/70" animated />
-      <div className="container-x relative pb-16 pt-12 md:pb-24 md:pt-16">
+    <header className="relative isolate overflow-hidden bg-navy-deep text-white">
+      <Photo src={src} stock={image} fill priority sizes="100vw" className="-z-20 animate-kenburns" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy-deep via-navy-deep/85 to-navy/40" aria-hidden />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-t from-navy-deep/80 via-transparent to-transparent" aria-hidden />
+      <Sparkle className="pointer-events-none absolute right-[8%] top-10 hidden h-10 w-10 text-sky md:block" animated />
+      <div className="container-x relative pb-20 pt-12 md:pb-32 md:pt-20">
         {crumbs && (
           <nav aria-label="Breadcrumb" className="mb-6 text-sm text-white/60">
             <ol className="flex flex-wrap items-center gap-1.5">
@@ -116,47 +117,50 @@ export function TrustMarquee() {
   );
 }
 
-export function ServiceCard({ service }: { service: Service }) {
+export function ServiceCard({ service, className }: { service: Service; className?: string }) {
   return (
-    <Link href={`/services/${service.slug}`} className="group card flex h-full flex-col p-5 transition hover:-translate-y-1 hover:border-brand/40 hover:shadow-soft">
-      <div className="flex items-start justify-between gap-3">
-        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-light text-brand transition group-hover:bg-brand group-hover:text-white"><ServiceIcon name={service.icon} className="h-6 w-6" /></span>
-        {filled(service.priceFrom) && <span className="chip bg-leaf-soft text-leaf-dark">From {service.priceFrom}</span>}
+    <Link href={`/services/${service.slug}`} className={cn("group card flex h-full flex-col overflow-hidden transition duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-soft", className)}>
+      <div className="relative aspect-[4/3] overflow-hidden bg-mist">
+        <Photo src={service.image} stock={serviceStock(service.slug)} alt={service.title} fill sizes="(max-width: 640px) 85vw, (max-width: 1024px) 45vw, 30vw" className="transition duration-700 group-hover:scale-105" />
+        <div className="absolute inset-0 bg-gradient-to-t from-navy-deep/70 via-transparent to-transparent" aria-hidden />
+        <span className="absolute left-4 top-4 grid h-11 w-11 place-items-center rounded-2xl bg-white/95 text-brand shadow-card"><ServiceIcon name={service.icon} className="h-5 w-5" /></span>
+        {filled(service.priceFrom) && <span className="absolute bottom-4 left-4 rounded-full bg-leaf-dark px-3 py-1 text-sm font-bold text-white">From {service.priceFrom}</span>}
       </div>
-      <h3 className="mt-4 font-display text-xl font-bold text-navy">{service.title}</h3>
-      <p className="mt-2 flex-1 text-[15px] text-slate">{service.summary}</p>
-      <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-brand">View service <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden /></span>
+      <div className="flex flex-1 flex-col p-5">
+        <h3 className="font-display text-xl font-bold text-navy">{service.title}</h3>
+        <p className="mt-2 line-clamp-3 flex-1 text-[15px] text-slate">{service.summary}</p>
+        <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-brand">View service <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" aria-hidden /></span>
+      </div>
     </Link>
   );
 }
 
-const CATEGORY_TINTS = ["from-brand to-navy", "from-[#2E9BEA] to-brand", "from-leaf-dark to-[#145214]", "from-navy-soft to-navy-deep"];
-
 export function CategoryShowcase({ services }: { services: Service[] }) {
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {SERVICE_CATEGORIES.map((category, index) => {
         const items = services.filter((service) => service.visible && service.category === category.id);
         if (!items.length) return null;
         return (
           <FadeIn key={category.id} delay={index * 80}>
             <article id={category.id} className="card h-full scroll-mt-28 overflow-hidden">
-              <div className={cn("relative overflow-hidden bg-gradient-to-br p-6 text-white", CATEGORY_TINTS[index % CATEGORY_TINTS.length])}>
-                <Sparkle className="absolute -right-4 -top-4 h-24 w-24 text-white/10" />
+              <div className="relative isolate flex min-h-[230px] flex-col justify-end overflow-hidden p-6 text-white md:min-h-[280px]">
+                <Photo stock={categoryStock(category.id)} alt={category.title} fill sizes="(max-width: 1024px) 100vw, 50vw" className="-z-20" />
+                <div className="absolute inset-0 -z-10 bg-gradient-to-t from-navy-deep via-navy-deep/60 to-navy-deep/5" aria-hidden />
                 <div className="flex items-center gap-3">
-                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/15 backdrop-blur"><ServiceIcon name={category.icon} className="h-6 w-6" /></span>
+                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/25 backdrop-blur"><ServiceIcon name={category.icon} className="h-6 w-6" /></span>
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/70">{items.length} service{items.length === 1 ? "" : "s"}</p>
-                    <h3 className="font-display text-2xl font-extrabold">{category.title}</h3>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/75">{items.length} service{items.length === 1 ? "" : "s"}</p>
+                    <h3 className="font-display text-2xl font-extrabold md:text-3xl">{category.title}</h3>
                   </div>
                 </div>
-                <p className="mt-3 max-w-md text-white/80">{category.blurb}</p>
+                <p className="mt-3 max-w-md text-white/85">{category.blurb}</p>
               </div>
               <ul className="divide-y divide-line">
                 {items.map((service) => (
                   <li key={service.id}>
-                    <Link href={`/services/${service.slug}`} className="group flex items-center gap-4 px-6 py-4 hover:bg-mist">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-light text-brand"><ServiceIcon name={service.icon} className="h-5 w-5" /></span>
+                    <Link href={`/services/${service.slug}`} className="group flex items-center gap-4 px-5 py-3.5 hover:bg-mist sm:px-6">
+                      <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-mist"><Photo src={service.image} stock={serviceStock(service.slug)} fill sizes="56px" /></span>
                       <span className="min-w-0 flex-1">
                         <span className="block font-semibold text-navy group-hover:text-brand">{service.title}</span>
                         <span className="block truncate text-sm text-slate">{service.summary}</span>
@@ -247,13 +251,21 @@ export function AreaList({ areas }: { areas: string[] }) {
 }
 
 export function TeamVisual({ photo, className }: { photo: string; className?: string }) {
-  if (filled(photo)) return <MediaImage src={photo} alt="The Spotless NT team in uniform" className={cn("h-full w-full rounded-card object-cover", className)} />;
   return (
-    <div className={cn("relative grid grid-cols-3 items-center gap-2 overflow-hidden rounded-card bg-gradient-to-b from-sky-soft to-mist px-4 py-14", className)}>
-      <Technician variant={1} className="translate-y-4" />
-      <Technician variant={0} className="scale-110" />
-      <Technician variant={2} className="translate-y-4" />
-      <span className="absolute left-4 top-4 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-slate">Illustration</span>
+    <div className={cn("relative grid grid-cols-5 grid-rows-6 gap-3 sm:gap-4", className)}>
+      <div className="relative col-span-3 row-span-6 min-h-[340px] overflow-hidden rounded-card shadow-soft sm:min-h-[460px]">
+        <Photo src={photo} stock={STOCK.team} alt="A Spotless NT style cleaning crew" fill sizes="(max-width: 1024px) 60vw, 30vw" />
+      </div>
+      <div className="relative col-span-2 row-span-3 overflow-hidden rounded-card shadow-card">
+        <Photo stock={STOCK.carpet} alt="Carpet cleaning in progress" fill sizes="(max-width: 1024px) 40vw, 20vw" />
+      </div>
+      <div className="relative col-span-2 row-span-3 overflow-hidden rounded-card shadow-card">
+        <Photo stock={STOCK.sofa} alt="Sofa cleaning in progress" fill sizes="(max-width: 1024px) 40vw, 20vw" />
+      </div>
+      <div className="absolute -bottom-5 left-4 flex items-center gap-3 rounded-2xl bg-white p-3 pr-5 shadow-soft sm:left-6">
+        <span className="grid h-11 w-11 place-items-center rounded-xl bg-leaf-soft text-leaf-dark"><ShieldCheck className="h-6 w-6" aria-hidden /></span>
+        <span><span className="block font-display font-extrabold text-navy">Uniformed & local</span><span className="text-sm text-slate">Darwin owned and operated</span></span>
+      </div>
     </div>
   );
 }
@@ -262,19 +274,19 @@ export function CtaBand({ settings }: { settings: Settings }) {
   return (
     <section className="section">
       <div className="container-x">
-        <div className="relative overflow-hidden rounded-[36px] bg-hero p-8 text-white md:p-14">
-          <div className="pointer-events-none absolute inset-0 bg-grid" aria-hidden />
-          <Sparkle className="absolute right-10 top-10 h-12 w-12 text-sky" animated />
-          <Sparkle className="absolute bottom-10 right-1/3 h-6 w-6 text-leaf" animated />
+        <div className="relative isolate overflow-hidden rounded-[32px] p-7 text-white sm:p-10 md:rounded-[40px] md:p-14">
+          <Photo stock={STOCK.living} fill sizes="100vw" className="-z-20" />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy-deep via-navy-deep/90 to-brand/70" aria-hidden />
+          <Sparkle className="absolute right-10 top-10 hidden h-12 w-12 text-sky md:block" animated />
           <div className="relative grid gap-8 md:grid-cols-[1.4fr_1fr] md:items-center">
             <div>
-              <h2 className="font-display text-4xl font-extrabold leading-tight md:text-5xl">Let’s make it spotless.</h2>
-              <p className="mt-4 max-w-xl text-lg text-white/75">Tell us what needs cleaning and get a fixed price, usually the same day. No call-out fee for a quote.</p>
+              <h2 className="font-display text-[34px] font-extrabold leading-tight md:text-5xl">Let’s make it spotless.</h2>
+              <p className="mt-4 max-w-xl text-lg text-white/80">Tell us what needs cleaning and get a fixed price, usually the same day. No call-out fee for a quote.</p>
             </div>
             <div className="flex flex-col gap-3">
               <Link href="/free-quote" className="inline-flex min-h-14 items-center justify-center rounded-full bg-leaf-dark px-6 text-lg font-bold text-white hover:bg-[#1d6a19]">Get my free quote</Link>
               <button type="button" data-open-chat className="inline-flex min-h-14 items-center justify-center rounded-full bg-white px-6 text-lg font-bold text-navy hover:bg-brand-light">Chat with us now</button>
-              <a href={`tel:${settings.phoneTel}`} className="text-center font-semibold text-white/80 hover:text-white">or call {settings.phoneDisplay}</a>
+              <a href={`tel:${settings.phoneTel}`} className="text-center font-semibold text-white/85 hover:text-white">or call {settings.phoneDisplay}</a>
             </div>
           </div>
         </div>

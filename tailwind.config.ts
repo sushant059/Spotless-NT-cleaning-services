@@ -39,6 +39,7 @@ const config: Config = {
         reveal: { "0%": { clipPath: "inset(0 100% 0 0)" }, "50%": { clipPath: "inset(0 15% 0 0)" }, "100%": { clipPath: "inset(0 100% 0 0)" } },
         marquee: { "0%": { transform: "translateX(0)" }, "100%": { transform: "translateX(-50%)" } },
         rise: { "0%": { opacity: "0", transform: "translateY(18px)" }, "100%": { opacity: "1", transform: "translateY(0)" } },
+        kenburns: { "0%": { transform: "scale(1.04) translate(0, 0)" }, "100%": { transform: "scale(1.14) translate(-2%, -2%)" } },
       },
       animation: {
         twinkle: "twinkle 2.8s ease-in-out infinite",
@@ -47,6 +48,7 @@ const config: Config = {
         reveal: "reveal 7s ease-in-out infinite",
         marquee: "marquee 40s linear infinite",
         rise: "rise .6s ease-out both",
+        kenburns: "kenburns 18s ease-in-out infinite alternate",
       },
     },
   },

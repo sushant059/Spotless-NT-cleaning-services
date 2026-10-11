@@ -28,11 +28,11 @@ export function FloatingActions({ settings, onChat, chatOpen }: { settings: Sett
             <ArrowUp className="h-5 w-5" aria-hidden />
           </button>
         )}
-        <a href={whatsappHref(settings)} target="_blank" rel="noopener noreferrer" className="grid h-14 w-14 place-items-center rounded-full bg-whatsapp text-white shadow-soft transition hover:scale-105" aria-label="Chat on WhatsApp">
+        <a href={whatsappHref(settings)} target="_blank" rel="noopener noreferrer" className="hidden h-14 w-14 place-items-center rounded-full bg-whatsapp md:grid text-white shadow-soft transition hover:scale-105" aria-label="Chat on WhatsApp">
           <BrandIcon name="whatsapp" className="h-7 w-7" />
         </a>
         {!chatOpen && (
-          <div className="flex items-center gap-3">
+          <div className="hidden items-center gap-3 md:flex">
             {hint && (
               <button type="button" onClick={onChat} className="hidden animate-rise rounded-2xl rounded-br-sm bg-white px-4 py-2.5 text-sm font-semibold text-navy shadow-soft ring-1 ring-line md:block">
                 Need a quote? I can help 👋

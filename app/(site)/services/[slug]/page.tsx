@@ -5,12 +5,13 @@ import { ArrowRight, CheckCircle2, Clock, MessageSquareText, Phone, Tag } from "
 import { BeforeAfter } from "@/components/before-after";
 import { CtaBand, FaqList, PageHero, ReviewCard, SectionHeading, ServiceCard } from "@/components/content";
 import { PhotoGallery } from "@/components/gallery";
-import { SceneArt } from "@/components/scene-art";
+import { Photo } from "@/components/photo";
 import { VideoPlayer } from "@/components/video";
 import { whatsappHref } from "@/components/social";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { getDb } from "@/lib/store";
-import { byOrder, filled, siteUrl } from "@/lib/utils";
+import { serviceGalleryStock, serviceStock } from "@/lib/stock";
+import { byOrder, cn, filled, siteUrl } from "@/lib/utils";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -42,7 +43,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
   return (
     <article>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-      <PageHero eyebrow={category?.title ?? "Service"} title={service.title} lede={service.summary} crumbs={[{ href: "/services", label: "Services" }, ...(category ? [{ href: `/services#${category.id}`, label: category.title }] : []), { href: `/services/${service.slug}`, label: service.title }]}>
+      <PageHero image={serviceStock(service.slug)} src={service.image} eyebrow={category?.title ?? "Service"} title={service.title} lede={service.summary} crumbs={[{ href: "/services", label: "Services" }, ...(category ? [{ href: `/services#${category.id}`, label: category.title }] : []), { href: `/services/${service.slug}`, label: service.title }]}>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Link href={`/free-quote?service=${service.slug}`} className="inline-flex min-h-14 items-center justify-center rounded-full bg-leaf-dark px-7 font-bold text-white hover:bg-[#1d6a19]">Get a free quote</Link>
           <Link href={`/booking?service=${service.slug}`} className="inline-flex min-h-14 items-center justify-center rounded-full bg-white px-7 font-bold text-navy hover:bg-brand-light">Book this service</Link>
@@ -111,9 +112,11 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
                 <PhotoGallery images={service.gallery} title={service.title} />
               ) : (
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                  <div className="col-span-2 row-span-2 aspect-square overflow-hidden rounded-2xl"><SceneArt scene={service.slug} clean alt={`${service.title} sample illustration`} /></div>
-                  <div className="aspect-square overflow-hidden rounded-2xl"><SceneArt scene={service.slug} clean={false} alt="" /></div>
-                  <div className="grid aspect-square place-items-center rounded-2xl border-2 border-dashed border-line p-4 text-center text-sm text-slate">Real job photos are on the way.</div>
+                  {serviceGalleryStock(service.slug).map((item, index) => (
+                    <div key={item.id} className={cn("relative overflow-hidden rounded-2xl bg-mist", index === 0 ? "col-span-2 row-span-2 aspect-square" : "aspect-square")}>
+                      <Photo stock={[item]} alt={item.alt} fill sizes={index === 0 ? "(max-width: 768px) 100vw, 40vw" : "(max-width: 768px) 50vw, 20vw"} className="transition duration-700 hover:scale-105" />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

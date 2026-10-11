@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, MapPin, Search } from "lucide-react";
-import { ServiceIcon } from "@/components/icons";
+import { Photo } from "@/components/photo";
+import { serviceStock } from "@/lib/stock";
 import { VideoPlayer } from "@/components/video";
 import { matchSuburb } from "@/lib/validators";
 import type { Service } from "@/lib/types";
@@ -51,13 +52,13 @@ export function VideoShowcase({ services }: { services: Service[] }) {
             onClick={() => setActive(service.slug)}
             className={cn("flex shrink-0 items-center gap-3 rounded-2xl px-4 py-3 text-left font-semibold transition", service.slug === current.slug ? "bg-white text-navy shadow-card" : "text-white/75 hover:bg-white/10 hover:text-white")}
           >
-            <span className={cn("grid h-9 w-9 place-items-center rounded-xl", service.slug === current.slug ? "bg-brand text-white" : "bg-white/10")}><ServiceIcon name={service.icon} className="h-4 w-4" /></span>
+            <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-white/10"><Photo src={service.image} stock={serviceStock(service.slug)} fill sizes="40px" /></span>
             {service.title}
             {service.videoUrl && <span className="ml-auto hidden h-2 w-2 rounded-full bg-leaf lg:block" aria-label="Video available" />}
           </button>
         ))}
       </div>
-      <div role="tabpanel" className="overflow-hidden rounded-card bg-navy-deep shadow-soft ring-1 ring-white/10">
+      <div role="tabpanel" className="self-start overflow-hidden rounded-card bg-navy-deep shadow-soft ring-1 ring-white/10">
         <VideoPlayer key={current.slug} url={current.videoUrl} poster={current.image} title={`${current.title} by Spotless NT`} scene={current.slug} />
         <div className="flex flex-wrap items-center justify-between gap-3 p-5">
           <div>

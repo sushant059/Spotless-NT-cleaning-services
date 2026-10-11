@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHero } from "@/components/content";
+import { STOCK } from "@/lib/stock";
 
 export const metadata: Metadata = {
   title: "Privacy",
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <>
-      <PageHero eyebrow="Privacy" title="Privacy policy" lede="This is a plain-language summary for customers in Australia. It is not a substitute for legal advice." />
+      <PageHero image={STOCK.living} eyebrow="Privacy" title="Privacy policy" lede="This is a plain-language summary for customers in Australia. It is not a substitute for legal advice." />
       <section className="section pt-12">
         <div className="prose-page container-x card max-w-3xl space-y-4 p-6 text-slate md:p-10">
           <p>Spotless NT Cleaning Services collects your name, phone number, email, suburb, address, job details and any photos you choose to send. We use that information to quote, book and carry out cleaning, and to reply to you.</p>

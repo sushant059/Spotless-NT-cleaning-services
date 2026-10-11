@@ -4,6 +4,7 @@ import { PageHero } from "@/components/content";
 import { QuoteForm } from "@/components/forms/quote-form";
 import { getDb } from "@/lib/store";
 import { byOrder } from "@/lib/utils";
+import { STOCK } from "@/lib/stock";
 
 export const metadata: Metadata = {
   title: "Free quote",
@@ -16,7 +17,7 @@ export default async function QuotePage({ searchParams }: { searchParams: Promis
   const initial = db.services.some((item) => item.slug === service && item.visible) ? service : "";
   return (
     <>
-      <PageHero eyebrow="Free quote" title="Get your fixed price." lede="A short form is enough. Add photos if a stain is easier to show than describe. We’ll call you with the price." crumbs={[{ href: "/free-quote", label: "Free quote" }]} />
+      <PageHero image={STOCK.carpetAlt} eyebrow="Free quote" title="Get your fixed price." lede="A short form is enough. Add photos if a stain is easier to show than describe. We’ll call you with the price." crumbs={[{ href: "/free-quote", label: "Free quote" }]} />
       <section className="section pt-12">
         <div className="container-x grid gap-10 lg:grid-cols-[1fr_1.4fr]">
           <div className="space-y-4">

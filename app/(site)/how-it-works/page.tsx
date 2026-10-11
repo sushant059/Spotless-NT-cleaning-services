@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CtaBand, PageHero, SectionHeading, Steps } from "@/components/content";
 import { getDb } from "@/lib/store";
+import { STOCK } from "@/lib/stock";
 
 export const metadata: Metadata = {
   title: "How it works",
@@ -19,7 +20,7 @@ export default async function HowItWorksPage() {
   const db = await getDb();
   return (
     <>
-      <PageHero eyebrow="How it works" title="Simple to book. Careful on the day." lede="No mystery packages. You ask, we price it, we clean, and we tell you when the room is ready to use." crumbs={[{ href: "/how-it-works", label: "How it works" }]} />
+      <PageHero image={STOCK.urgent} eyebrow="How it works" title="Simple to book. Careful on the day." lede="No mystery packages. You ask, we price it, we clean, and we tell you when the room is ready to use." crumbs={[{ href: "/how-it-works", label: "How it works" }]} />
       <section className="section pt-12">
         <div className="container-x"><Steps /></div>
       </section>

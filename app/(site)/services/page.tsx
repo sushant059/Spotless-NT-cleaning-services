@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CategoryShowcase, CtaBand, PageHero } from "@/components/content";
 import { ServiceIcon } from "@/components/icons";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
+import { STOCK } from "@/lib/stock";
 import { getDb } from "@/lib/store";
 import { byOrder } from "@/lib/utils";
 
@@ -16,7 +17,7 @@ export default async function ServicesPage() {
   const services = byOrder(db.services).filter((service) => service.visible);
   return (
     <>
-      <PageHero eyebrow="Services" title="Everything we clean, sorted by category." lede="Choose a category, then a service, to see what’s included, the process, videos, photos and real before-and-afters." crumbs={[{ href: "/services", label: "Services" }]}>
+      <PageHero image={STOCK.carpet} eyebrow="Services" title="Everything we clean, sorted by category." lede="Choose a category, then a service, to see what’s included, the process, videos, photos and real before-and-afters." crumbs={[{ href: "/services", label: "Services" }]}>
         <div className="mt-8 flex flex-wrap gap-2">
           {SERVICE_CATEGORIES.map((category) => (
             <Link key={category.id} href={`#${category.id}`} className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/15 hover:bg-white hover:text-navy">

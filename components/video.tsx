@@ -1,5 +1,7 @@
 import { Play } from "lucide-react";
+import { ClipPlayer } from "@/components/photo";
 import { SceneArt } from "@/components/scene-art";
+import { clipFor } from "@/lib/stock";
 import { parseVideo } from "@/lib/video";
 import { cn } from "@/lib/utils";
 
@@ -52,5 +54,6 @@ export function VideoPlayer({ url, poster, title, scene, className }: { url: str
       </a>
     );
   }
-  return <AnimatedPreview scene={scene} className={className} />;
+  // No video of their own yet: show free stock footage for now.
+  return <ClipPlayer clip={clipFor(scene)} title={title} className={className} />;
 }

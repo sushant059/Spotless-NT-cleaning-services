@@ -5,6 +5,7 @@ import { ContactForm } from "@/components/forms/contact-form";
 import { BrandIcon, SocialIcons, whatsappHref } from "@/components/social";
 import { getDb } from "@/lib/store";
 import { filled } from "@/lib/utils";
+import { STOCK } from "@/lib/stock";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -21,7 +22,7 @@ export default async function ContactPage() {
   ];
   return (
     <>
-      <PageHero eyebrow="Contact" title="We’d love to hear from you." lede="Call, WhatsApp, email or chat. For a price, the quote form or the chat assistant is quickest." crumbs={[{ href: "/contact", label: "Contact" }]} />
+      <PageHero image={STOCK.hero} eyebrow="Contact" title="We’d love to hear from you." lede="Call, WhatsApp, email or chat. For a price, the quote form or the chat assistant is quickest." crumbs={[{ href: "/contact", label: "Contact" }]} />
       <section className="section pt-12">
         <div className="container-x">
           <div className="grid gap-4 md:grid-cols-3">
