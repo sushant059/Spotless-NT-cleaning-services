@@ -32,7 +32,7 @@ export default async function ReviewsPage() {
       </PageHero>
       <section className="section pt-12">
         <div className="container-x">
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0">
             {reviews.map((review) => <ReviewCard key={review.id} review={review} />)}
           </div>
           {reviews.length === 0 && <p className="card p-6 text-slate">No reviews yet. Yours could be the first!</p>}

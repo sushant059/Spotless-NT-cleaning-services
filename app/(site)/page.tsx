@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock, MessageSquareText, Phone, ShieldCheck } from "lucide-react";
 import { BeforeAfter } from "@/components/before-after";
-import { CategoryShowcase, CtaBand, FaqList, GoogleReviewButton, Pillars, ReviewCard, SectionHeading, ServiceCard, Steps, TeamVisual, TrustMarquee } from "@/components/content";
+import { CategoryShowcase, CtaBand, FaqList, GoogleReviewButton, Pillars, ReviewCard, SectionHeading, ServiceCard, TeamVisual, TrustMarquee } from "@/components/content";
+import { Bubbles } from "@/components/clean/bubbles";
+import { CountUp } from "@/components/clean/count-up";
+import { ProcessPath } from "@/components/clean/process-path";
+import { WipeReveal } from "@/components/clean/wipe-reveal";
 import { FadeIn } from "@/components/fade-in";
 import { SuburbChecker, VideoShowcase } from "@/components/home/interactive";
 import { BackgroundVideo, Photo } from "@/components/photo";
@@ -38,6 +42,7 @@ export default async function HomePage() {
         )}
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy-deep via-navy-deep/80 to-navy-deep/20" aria-hidden />
         <div className="absolute inset-0 -z-10 bg-gradient-to-t from-navy-deep via-transparent to-navy-deep/40" aria-hidden />
+        <Bubbles className="-z-10" />
         <div className="container-x grid min-h-[calc(100svh-120px)] items-center gap-10 py-14 md:py-20 lg:grid-cols-[1.25fr_1fr]">
           <div className="animate-rise">
             <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-sky-soft ring-1 ring-white/20 backdrop-blur">
@@ -47,7 +52,7 @@ export default async function HomePage() {
               {s.heroHeadline.split(" ").slice(0, -2).join(" ")}{" "}
               <span className="relative whitespace-nowrap text-sky">
                 {s.heroHeadline.split(" ").slice(-2).join(" ")}
-                <Sparkle className="absolute -right-7 -top-4 h-7 w-7 text-leaf" animated />
+                <Sparkle className="absolute -right-7 -top-4 hidden h-7 w-7 text-leaf sm:block" animated />
               </span>
             </h1>
             <p className="mt-6 max-w-xl text-lg text-white/85 md:text-xl">{s.heroSubtext}</p>
@@ -89,7 +94,7 @@ export default async function HomePage() {
               ["4–8 hrs", "typical carpet drying"],
             ].map(([value, label]) => (
               <div key={label} className="px-2 text-center md:border-l md:border-white/15 md:first:border-l-0">
-                <dd className="font-display text-2xl font-extrabold text-white md:text-3xl">{value}</dd>
+                <dd className="font-display text-2xl font-extrabold text-white md:text-3xl"><CountUp value={value} /></dd>
                 <dt className="text-sm text-white/70">{label}</dt>
               </div>
             ))}
@@ -118,6 +123,8 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      <WipeReveal />
 
       {/* Offers */}
       {offers.length > 0 && (
@@ -189,10 +196,11 @@ export default async function HomePage() {
       <section className="section relative isolate overflow-hidden text-white">
         <Photo stock={STOCK.crew} fill sizes="100vw" className="-z-20" />
         <div className="absolute inset-0 -z-10 bg-navy-deep/85" aria-hidden />
+        <Bubbles className="-z-10" count={8} />
         <div className="container-x">
           <p className="eyebrow text-sky"><Sparkle className="h-3 w-3 text-leaf" /> How it works</p>
           <h2 className="mt-3 font-display text-[32px] font-extrabold leading-[1.08] md:text-5xl">Booked in four easy steps.</h2>
-          <div className="mt-10"><Steps tone="dark" /></div>
+          <div className="mt-10 lg:mt-14"><ProcessPath /></div>
         </div>
       </section>
 

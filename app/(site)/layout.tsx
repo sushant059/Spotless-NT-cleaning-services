@@ -2,6 +2,7 @@ import { RevealObserver } from "@/components/fade-in";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { OfferBanner } from "@/components/layout/offer-banner";
+import { ScrollProgress } from "@/components/clean/scroll-progress";
 import { SiteWidgets } from "@/components/layout/site-widgets";
 import { getDb } from "@/lib/store";
 import { byOrder, filled, safeHttpUrl, siteUrl } from "@/lib/utils";
@@ -39,6 +40,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   return (
     <>
       <a href="#content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[90] focus:rounded-full focus:bg-white focus:px-4 focus:py-3 focus:text-navy">Skip to content</a>
+      <ScrollProgress />
       <div className="sticky top-0 z-40">
         {banner && <OfferBanner id={banner.id} text={banner.bannerText} href={banner.href || "/offers"} settings={db.settings} />}
         <Header settings={db.settings} services={services} />

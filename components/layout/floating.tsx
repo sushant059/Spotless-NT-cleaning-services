@@ -24,7 +24,7 @@ export function FloatingActions({ settings, onChat, chatOpen }: { settings: Sett
     <>
       <div className={cn("fixed bottom-24 right-4 z-40 flex flex-col items-end gap-3 md:bottom-6 md:right-6", chatOpen && "hidden md:flex")}>
         {showTop && (
-          <button type="button" className="grid h-11 w-11 place-items-center rounded-full bg-white text-navy shadow-card ring-1 ring-line" aria-label="Back to top" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+          <button type="button" className="hidden h-11 w-11 place-items-center rounded-full bg-white text-navy shadow-card ring-1 ring-line md:grid" aria-label="Back to top" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
             <ArrowUp className="h-5 w-5" aria-hidden />
           </button>
         )}

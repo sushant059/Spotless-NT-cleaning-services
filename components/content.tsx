@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, CalendarCheck, Droplets, MapPin, PawPrint, ShieldCheck, Sparkles, Star, ThumbsUp } from "lucide-react";
+import { Bubbles } from "@/components/clean/bubbles";
 import { Photo } from "@/components/photo";
 import { FadeIn } from "@/components/fade-in";
 import { ServiceIcon } from "@/components/icons";
@@ -64,7 +65,7 @@ export function Stars({ rating, className }: { rating: number; className?: strin
 export function ReviewCard({ review, className }: { review: Review; className?: string }) {
   const initials = review.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   return (
-    <article className={cn("card flex h-full flex-col p-6", className)}>
+    <article className={cn("card flex h-full min-w-0 flex-col p-5 sm:p-6", className)}>
       <div className="flex items-center justify-between gap-3">
         <Stars rating={review.rating} />
         {review.source === "google" && <BrandIcon name="google" className="h-5 w-5 text-[#4285F4]" />}
@@ -72,7 +73,7 @@ export function ReviewCard({ review, className }: { review: Review; className?: 
       {review.source === "sample" && <p className="mt-3 inline-flex w-fit rounded-full bg-sun-soft px-2.5 py-0.5 text-xs font-bold text-[#8A5A00]">Sample — replace with real reviews</p>}
       <blockquote className="mt-4 flex-1 text-[17px] leading-relaxed text-ink">“{review.text}”</blockquote>
       <footer className="mt-6 flex items-center gap-3 border-t border-line pt-4">
-        <span className="grid h-11 w-11 place-items-center rounded-full bg-brand-light font-display font-bold text-brand">{initials || "★"}</span>
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-light font-display font-bold text-brand">{initials || "★"}</span>
         <span className="min-w-0">
           <span className="flex items-center gap-1.5 font-semibold text-navy">{review.name}{review.source === "customer" && <BadgeCheck className="h-4 w-4 text-leaf" aria-label="Verified customer" />}</span>
           <span className="block truncate text-sm text-slate">{[review.service, review.suburb, review.date && formatDisplayDate(review.date)].filter(Boolean).join(" · ")}</span>
@@ -188,13 +189,15 @@ export function Pillars() {
     [Sparkles, "Straight talk on results", "If a stain is permanent we tell you up front, rather than over-promise."],
   ] as const;
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
       {items.map(([Icon, title, text], index) => (
         <FadeIn key={title} delay={index * 60}>
-          <article className="card h-full p-6">
-            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-leaf-soft text-leaf-dark"><Icon className="h-6 w-6" aria-hidden /></span>
-            <h3 className="mt-4 font-display text-xl font-bold text-navy">{title}</h3>
-            <p className="mt-2 text-slate">{text}</p>
+          <article className="card group flex h-full gap-4 p-4 transition duration-300 hover:-translate-y-1 hover:shadow-soft sm:block sm:p-6">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-leaf-soft text-leaf-dark transition duration-500 group-hover:rotate-[8deg] group-hover:scale-110"><Icon className="h-6 w-6" aria-hidden /></span>
+            <span className="block min-w-0">
+              <h3 className="font-display text-lg font-bold text-navy sm:mt-4 sm:text-xl">{title}</h3>
+              <p className="mt-1 text-[15px] text-slate sm:mt-2 sm:text-base">{text}</p>
+            </span>
           </article>
         </FadeIn>
       ))}
@@ -277,6 +280,7 @@ export function CtaBand({ settings }: { settings: Settings }) {
         <div className="relative isolate overflow-hidden rounded-[32px] p-7 text-white sm:p-10 md:rounded-[40px] md:p-14">
           <Photo stock={STOCK.living} fill sizes="100vw" className="-z-20" />
           <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy-deep via-navy-deep/90 to-brand/70" aria-hidden />
+          <Bubbles className="-z-10" count={9} />
           <Sparkle className="absolute right-10 top-10 hidden h-12 w-12 text-sky md:block" animated />
           <div className="relative grid gap-8 md:grid-cols-[1.4fr_1fr] md:items-center">
             <div>

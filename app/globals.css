@@ -126,3 +126,48 @@ p {
     margin: 14mm;
   }
 }
+
+/* Soap bubbles rising through a section */
+.bubble {
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(214, 236, 252, 0.35) 40%, rgba(46, 155, 234, 0.12) 70%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: inset -2px -3px 6px rgba(46, 155, 234, 0.25);
+  animation-name: bubble-rise;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in;
+  opacity: 0;
+}
+@keyframes bubble-rise {
+  0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+  10% { opacity: 0.9; }
+  50% { transform: translate(18px, -45vh) scale(1); }
+  90% { opacity: 0.8; }
+  100% { transform: translate(-12px, -95vh) scale(1.1); opacity: 0; }
+}
+.bubble-pop {
+  animation: bubble-pop 1.2s ease-out infinite;
+}
+@keyframes bubble-pop {
+  0% { transform: translateY(0) scale(0.4); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translateY(-46px) scale(1.15); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bubble,
+  .bubble-pop {
+    animation: none;
+    display: none;
+  }
+}
+
+/* Press feedback on touch screens */
+@media (hover: none) {
+  a.press,
+  button.press {
+    transition: transform 0.15s ease;
+  }
+  a.press:active,
+  button.press:active {
+    transform: scale(0.97);
+  }
+}
