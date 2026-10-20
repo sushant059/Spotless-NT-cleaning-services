@@ -14,7 +14,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { seedDatabase } from "@/lib/seed";
 import { getDb, storeMediaFile, supabaseAnon, updateDb, usingSupabase } from "@/lib/store";
 import type { ActionResult, Booking, Customer, Database, DetailValue, Faq, Invoice, InvoiceStatus, Job, Lead, Offer, Promo, ResultPair, Review, Service, Settings } from "@/lib/types";
-import { cancelRequestFor, linkEnquiry } from "@/lib/crm";
+import { cancelRequestFor, linkEnquiry, matchCustomer } from "@/lib/crm";
 import { dayAvailability, isSlotFull, slotOccupants } from "@/lib/schedule";
 import { bookingSheetRow, customerSheetChanges, jobSheetRow, leadSheetRow, sheetsEnabled, syncEverything, syncSheet } from "@/lib/sheets";
 import { byOrder, darwinISODate, escapeHtml, formatDisplayDate, siteUrl, slugify, uid, uniqueReference } from "@/lib/utils";
@@ -1045,6 +1045,142 @@ export async function convertToCustomerAction(kind: "lead" | "booking", id: stri
   if (booking) await syncSheet("Bookings", [bookingSheetRow(booking)]);
   revalidatePath("/admin", "layout");
   return { ok: true, id: linked.customerId, message: "Job confirmed." };
+}
+
+/** Makes sure an enquiry has its customer (they're normally created automatically) and returns it, without confirming the job. */
+export async function enquiryCustomerAction(kind: "lead" | "booking", id: string): Promise<ActionResult & { id?: string }> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  let linked = { customerId: "", jobId: "", created: false };
+  let found = true;
+  const saved = await updateDb((db) => {
+    const source = kind === "lead" ? db.leads.find((item) => item.id === id) : db.bookings.find((item) => item.id === id);
+    if (!source) {
+      found = false;
+      return;
+    }
+    linked = linkEnquiry(db, kind, source);
+  });
+  if (!found) return { ok: false, error: "That enquiry no longer exists." };
+  if (linked.created) await syncCustomerSheets(saved, [linked.customerId], [linked.jobId]);
+  revalidatePath("/admin", "layout");
+  return { ok: true, id: linked.customerId, message: "Customer ready." };
+}
+
+/** Confirms an enquiry as a booked job: sets the date, time, price and notes, and marks the enquiry booked. */
+export async function confirmEnquiryJobAction(
+  kind: "lead" | "booking",
+  id: string,
+  details: { services: string; scheduledDate: string; timeWindow: string; price: string; notes: string },
+): Promise<ActionResult & { id?: string }> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  let linked = { customerId: "", jobId: "", created: false };
+  let found = true;
+  const db = await updateDb((next) => {
+    const source = kind === "lead" ? next.leads.find((item) => item.id === id) : next.bookings.find((item) => item.id === id);
+    if (!source) {
+      found = false;
+      return;
+    }
+    linked = linkEnquiry(next, kind, source);
+  });
+  if (!found) return { ok: false, error: "That enquiry no longer exists." };
+  const job = db.jobs.find((item) => item.id === linked.jobId);
+  if (!job) return { ok: false, error: "Could not find the job for this enquiry." };
+  const result = await saveJobAction(
+    {
+      ...job,
+      services: details.services.trim() || job.services,
+      scheduledDate: details.scheduledDate,
+      timeWindow: details.timeWindow,
+      price: details.price,
+      notes: [job.notes, details.notes.trim()].filter(Boolean).join("\n"),
+      status: job.status === "requested" ? "scheduled" : job.status,
+    },
+    "Confirmed from New enquiries",
+  );
+  if (!result.ok) return result;
+  const saved = await updateDb((next) => {
+    const source = kind === "lead" ? next.leads.find((item) => item.id === id) : next.bookings.find((item) => item.id === id);
+    if (source && (source.status === "new" || source.status === "contacted" || source.status === "quoted")) source.status = "booked";
+  });
+  const lead = saved.leads.find((item) => item.id === id);
+  const booking = saved.bookings.find((item) => item.id === id);
+  if (lead) await syncSheet("Leads", [leadSheetRow(lead)]);
+  if (booking) await syncSheet("Bookings", [bookingSheetRow(booking)]);
+  revalidatePath("/admin", "layout");
+  return { ok: true, id: linked.customerId, message: "Job booked." };
+}
+
+/** "+ Add job" from anywhere in the admin: for an existing customer, or a new one typed in on the spot. */
+export async function quickJobAction(input: {
+  customerId: string;
+  newCustomer?: { name: string; phone: string; email: string; address: string; suburb: string; companyName: string };
+  services: string;
+  address: string;
+  scheduledDate: string;
+  timeWindow: string;
+  price: string;
+  notes: string;
+  status: Job["status"];
+}): Promise<ActionResult & { id?: string; customerId?: string }> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  let customerId = input.customerId;
+  if (!customerId) {
+    const person = input.newCustomer;
+    if (!person || person.name.trim().length < 2) return { ok: false, error: "Type the customer's name, or pick an existing customer." };
+    if (person.phone.trim() && !normalizeAuPhone(person.phone)) return { ok: false, error: "Check the phone number." };
+    const now = nowIso();
+    let createdId = "";
+    const saved = await updateDb((db) => {
+      const phone = normalizeAuPhone(person.phone) || person.phone.trim();
+      const existing = matchCustomer(db, { name: person.name, phone, email: person.email });
+      if (existing) {
+        createdId = existing.id;
+        return;
+      }
+      createdId = uid("cust");
+      db.customers.unshift({
+        id: createdId,
+        type: person.companyName.trim() ? "company" : "person",
+        name: person.name.trim().slice(0, 120),
+        companyName: person.companyName.trim().slice(0, 120),
+        phone,
+        email: person.email.trim().slice(0, 200),
+        address: person.address.trim().slice(0, 300),
+        suburb: person.suburb.trim().slice(0, 80),
+        notes: "",
+        marketingOptIn: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+    customerId = createdId;
+    await syncCustomerSheets(saved, [customerId], []);
+  }
+  const result = await saveJobAction({
+    id: "",
+    reference: "",
+    customerId,
+    services: input.services,
+    address: input.address || input.newCustomer?.address || "",
+    scheduledDate: input.scheduledDate,
+    timeWindow: input.timeWindow,
+    completedDate: "",
+    price: input.price,
+    status: input.status,
+    notes: input.notes,
+    beforePhotos: [],
+    afterPhotos: [],
+    history: [],
+    sourceRef: "",
+    createdAt: "",
+    updatedAt: "",
+  });
+  if (!result.ok) return result;
+  return { ...result, customerId, message: "Job added." };
 }
 
 const firstName = (name: string) => name.trim().split(/\s+/)[0] || "there";

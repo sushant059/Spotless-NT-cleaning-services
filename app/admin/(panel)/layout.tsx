@@ -12,7 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const db = await getDb();
   const badges = {
     "/admin/reviews": db.reviews.filter((review) => review.status === "pending").length,
-    "/admin/customers": db.jobs.filter((job) => job.status === "complaint").length,
+    "/admin/jobs": db.jobs.filter((job) => job.status === "complaint" || job.status === "requested").length,
     "/admin/invoices": db.invoices.filter((invoice) => isOverdue(invoice, darwinISODate())).length,
     "/admin/leads": db.leads.filter((lead) => lead.status === "new").length + db.bookings.filter((booking) => booking.status === "new").length,
   };

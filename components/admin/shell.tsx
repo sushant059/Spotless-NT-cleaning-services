@@ -3,26 +3,55 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BadgePercent, Menu, Receipt, X, CalendarDays, ExternalLink, Images, Inbox, LayoutDashboard, ListChecks, LogOut, MessageSquareQuote, Send, Settings, Sparkles, SquareStack, Users } from "lucide-react";
+import { BadgePercent, Briefcase, Menu, Receipt, X, CalendarDays, ExternalLink, Images, Inbox, LayoutDashboard, ListChecks, LogOut, MessageSquareQuote, MoreHorizontal, Send, Settings, Sparkles, SquareStack, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { logoutAction } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 
-const LINKS = [
-  ["/admin", "Dashboard", LayoutDashboard],
-  ["/admin/calendar", "Calendar", CalendarDays],
-  ["/admin/leads", "Leads & bookings", Inbox],
-  ["/admin/customers", "Customers & jobs", Users],
-  ["/admin/invoices", "Invoices", Receipt],
-  ["/admin/messages", "Send offers", Send],
-  ["/admin/reviews", "Reviews", MessageSquareQuote],
-  ["/admin/services", "Services", SquareStack],
-  ["/admin/results", "Before & after", Sparkles],
-  ["/admin/media", "Gallery & media", Images],
-  ["/admin/offers", "Offers & promos", BadgePercent],
-  ["/admin/faqs", "FAQs", ListChecks],
-  ["/admin/settings", "Settings", Settings],
-] as const;
+type NavLink = readonly [string, string, LucideIcon];
+
+const GROUPS: { title: string; links: NavLink[] }[] = [
+  {
+    title: "Work",
+    links: [
+      ["/admin", "Dashboard", LayoutDashboard],
+      ["/admin/leads", "New enquiries", Inbox],
+      ["/admin/jobs", "Jobs", Briefcase],
+      ["/admin/calendar", "Calendar", CalendarDays],
+      ["/admin/customers", "Customers", Users],
+      ["/admin/invoices", "Invoices", Receipt],
+    ],
+  },
+  {
+    title: "Marketing",
+    links: [
+      ["/admin/messages", "Send offers", Send],
+      ["/admin/offers", "Offers & promos", BadgePercent],
+      ["/admin/reviews", "Reviews", MessageSquareQuote],
+    ],
+  },
+  {
+    title: "Website",
+    links: [
+      ["/admin/services", "Services", SquareStack],
+      ["/admin/results", "Before & after", Sparkles],
+      ["/admin/media", "Gallery & media", Images],
+      ["/admin/faqs", "FAQs", ListChecks],
+      ["/admin/settings", "Settings", Settings],
+    ],
+  },
+];
+
+const LINKS: NavLink[] = GROUPS.flatMap((group) => group.links);
+
+/** The four things used every day, in a bar at the bottom of the phone screen. */
+const TABS: NavLink[] = [
+  ["/admin", "Home", LayoutDashboard],
+  ["/admin/leads", "Enquiries", Inbox],
+  ["/admin/jobs", "Jobs", Briefcase],
+  ["/admin/customers", "Customers", Users],
+];
 
 export function AdminShell({ children, badges = {} }: { children: React.ReactNode; badges?: Record<string, number> }) {
   const pathname = usePathname();
@@ -45,16 +74,21 @@ export function AdminShell({ children, badges = {} }: { children: React.ReactNod
 
   const nav = (
     <nav className="space-y-1 px-3 pb-6" aria-label="Admin">
-      {LINKS.map(([href, label, Icon]) => {
-        const active = href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
-        const badge = badges[href];
-        return (
-          <Link key={href} href={href} onClick={() => setOpen(false)} className={cn("flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-semibold transition md:text-sm", active ? "bg-navy text-white" : "text-navy hover:bg-mist")}>
-            <Icon className="h-5 w-5 md:h-4 md:w-4" aria-hidden /> {label}
-            {badge ? <span className="ml-auto rounded-full bg-sun px-2 text-xs font-bold text-navy">{badge}</span> : null}
-          </Link>
-        );
-      })}
+      {GROUPS.map((group) => (
+        <div key={group.title} className="pb-2">
+          <p className="px-3 pb-1 pt-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate/80">{group.title}</p>
+          {group.links.map(([href, label, Icon]) => {
+            const active = href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+            const badge = badges[href];
+            return (
+              <Link key={href} href={href} onClick={() => setOpen(false)} className={cn("flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-semibold transition md:text-sm", active ? "bg-navy text-white" : "text-navy hover:bg-mist")}>
+                <Icon className="h-5 w-5 md:h-4 md:w-4" aria-hidden /> {label}
+                {badge ? <span className="ml-auto rounded-full bg-sun px-2 text-xs font-bold text-navy">{badge}</span> : null}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
       <div className="border-t border-line pt-2" />
       <Link href="/" target="_blank" className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-semibold text-brand hover:bg-mist md:text-sm"><ExternalLink className="h-5 w-5 md:h-4 md:w-4" aria-hidden /> View website</Link>
       <button type="button" className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-semibold text-slate hover:bg-mist md:text-sm" onClick={async () => { await logoutAction(); router.push("/admin/login"); router.refresh(); }}><LogOut className="h-5 w-5 md:h-4 md:w-4" aria-hidden /> Log out</button>
@@ -86,13 +120,29 @@ export function AdminShell({ children, badges = {} }: { children: React.ReactNod
       )}
       {/* Tablet and desktop: fixed sidebar */}
       <aside className="hidden border-r border-line bg-white md:sticky md:top-0 md:block md:h-screen md:overflow-y-auto">
-        <div className="flex items-center justify-between gap-2 px-4 py-4">
-          <Logo />
-          <span className="rounded-full bg-navy px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">Admin</span>
-        </div>
+        <div className="px-4 py-4"><Logo /></div>
         {nav}
       </aside>
-      <div className="min-w-0 px-4 py-6 md:px-8 md:py-8">{children}</div>
+      <div className="min-w-0 px-4 pb-28 pt-6 md:px-8 md:py-8">{children}</div>
+
+      {/* Phone: bottom tab bar for the everyday pages */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Quick">
+        {TABS.map(([href, label, Icon]) => {
+          const active = href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+          const badge = badges[href];
+          return (
+            <Link key={href} href={href} className={cn("relative flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold", active ? "text-brand" : "text-slate")}>
+              <Icon className="h-5 w-5" aria-hidden />
+              {label}
+              {badge ? <span className="absolute right-[calc(50%-20px)] top-2 grid h-4 min-w-4 place-items-center rounded-full bg-sun px-1 text-[10px] font-bold text-navy">{badge}</span> : null}
+              {active && <span className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-brand" />}
+            </Link>
+          );
+        })}
+        <button type="button" onClick={() => setOpen(true)} className="flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold text-slate" aria-label="More admin pages">
+          <MoreHorizontal className="h-5 w-5" aria-hidden /> More
+        </button>
+      </nav>
     </div>
   );
 }

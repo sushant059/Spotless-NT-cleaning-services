@@ -139,7 +139,7 @@ function BookingCard({ booking }: { booking: Booking }) {
   );
 }
 
-function BlockedDates({ blocked }: { blocked: BlockedDate[] }) {
+export function BlockedDates({ blocked }: { blocked: BlockedDate[] }) {
   const router = useRouter();
   const toast = useToast();
   const [date, setDate] = useState("");

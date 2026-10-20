@@ -5,6 +5,7 @@ import { CategoryShowcase, CtaBand, FaqList, GoogleReviewButton, Pillars, Review
 import { Bubbles } from "@/components/clean/bubbles";
 import { CountUp } from "@/components/clean/count-up";
 import { ProcessPath } from "@/components/clean/process-path";
+import { ScrubGame } from "@/components/clean/scrub-game";
 import { WipeReveal } from "@/components/clean/wipe-reveal";
 import { FadeIn } from "@/components/fade-in";
 import { SuburbChecker, VideoShowcase } from "@/components/home/interactive";
@@ -175,6 +176,8 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      <ScrubGame />
 
       {/* Team */}
       <section className="section overflow-hidden bg-mist">

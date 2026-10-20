@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Building2, Camera, ChevronRight, MessageCircle, Phone, Plus, Search, User } from "lucide-react";
 import { deleteCustomerAction, deleteJobAction, saveCustomerAction, saveJobAction } from "@/lib/actions";
 import { uploadFile } from "@/components/admin/upload";
+import { AddJobButton, type ServiceOption } from "@/components/admin/add-job";
+import { FilterChips, IconLink } from "@/components/admin/kit";
 import { MediaImage } from "@/components/media-image";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -53,10 +55,10 @@ export function displayName(customer: Customer) {
 
 /* ---------------------------------- List ---------------------------------- */
 
-export function CustomersBoard({ customers, jobs }: { customers: Customer[]; jobs: Job[] }) {
+export function CustomersBoard({ customers, jobs, services = [], startAdding = false }: { customers: Customer[]; jobs: Job[]; services?: ServiceOption[]; startAdding?: boolean }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(startAdding);
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return customers
@@ -73,14 +75,7 @@ export function CustomersBoard({ customers, jobs }: { customers: Customer[]; job
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {counts.map((item) => (
-          <button key={item.id} type="button" onClick={() => setStatus(status === item.id ? "all" : item.id)} className={cn("rounded-card bg-white p-4 text-left shadow-card transition", status === item.id && "ring-2 ring-navy")}>
-            <p className="text-2xl font-bold text-navy">{item.count}</p>
-            <p className="text-sm text-slate">{item.label} jobs</p>
-          </button>
-        ))}
-      </div>
+      <FilterChips label="Latest job status" value={status} onChange={setStatus} options={[{ id: "all", label: "All customers", count: customers.length }, ...counts.map((item) => ({ id: item.id, label: item.label, count: item.count }))]} />
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate" aria-hidden />
@@ -90,19 +85,64 @@ export function CustomersBoard({ customers, jobs }: { customers: Customer[]; job
       </div>
       {adding && <CustomerForm initial={emptyCustomer()} onDone={() => setAdding(false)} />}
       {rows.length === 0 && <p className="rounded-card bg-white p-6 text-slate shadow-card">{customers.length ? "No customers match." : "No customers yet. Add one, or press “Make customer & job” on a lead or booking."}</p>}
-      <ul className="space-y-2">
+      {rows.length > 0 && (
+        <div className="hidden overflow-hidden rounded-card bg-white shadow-card md:block">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-mist text-xs font-bold uppercase tracking-wider text-slate">
+              <tr>
+                <th className="px-4 py-3">Customer</th>
+                <th className="px-4 py-3">Contact</th>
+                <th className="px-4 py-3">Jobs</th>
+                <th className="px-4 py-3">Latest job</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {rows.map(({ customer, jobs: theirs, latest }) => (
+                <tr key={customer.id} className="align-middle transition hover:bg-mist/60">
+                  <td className="px-4 py-3">
+                    <Link href={`/admin/customers/${customer.id}`} className="flex items-center gap-3">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-light text-brand">{customer.type === "company" ? <Building2 className="h-5 w-5" aria-hidden /> : <User className="h-5 w-5" aria-hidden />}</span>
+                      <span className="min-w-0">
+                        <span className="block font-semibold text-navy hover:text-brand">{displayName(customer)}</span>
+                        <span className="block truncate text-xs text-slate">{customer.type === "company" ? customer.name : customer.suburb || customer.address}</span>
+                      </span>
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-slate"><p>{customer.phone || "—"}</p><p className="truncate text-xs">{customer.email}</p></td>
+                  <td className="px-4 py-3 font-semibold text-navy">{theirs.length}{customer.marketingOptIn && <span className="ml-2 rounded-full bg-leaf-soft px-2 py-0.5 text-xs font-bold text-leaf-dark">Offers OK</span>}</td>
+                  <td className="px-4 py-3">{latest ? <span className="flex flex-col items-start gap-1"><StatusBadge status={latest.status} /><span className="line-clamp-1 text-xs text-slate">{latest.services}</span></span> : <span className="text-slate">—</span>}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1.5">
+                      {customer.phone && <IconLink href={`tel:${customer.phone}`} label={`Call ${customer.name}`}><Phone className="h-4 w-4" aria-hidden /></IconLink>}
+                      {customer.phone && <IconLink href={waLink(customer.phone, `Hi ${customer.name}, it's Spotless NT.`)} label={`WhatsApp ${customer.name}`} external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
+                      <AddJobButton customers={customers} services={services} customerId={customer.id} size="sm" variant="outline" label="Add job" />
+                      <Link href={`/admin/customers/${customer.id}`} className="inline-flex min-h-10 items-center rounded-full bg-navy px-4 text-sm font-semibold text-white hover:bg-navy-deep">Open</Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <ul className="space-y-2 md:hidden">
         {rows.map(({ customer, jobs: theirs, latest }) => (
-          <li key={customer.id}>
-            <Link href={`/admin/customers/${customer.id}`} className="flex items-center gap-4 rounded-card bg-white p-4 shadow-card transition hover:ring-2 hover:ring-brand/30">
+          <li key={customer.id} className="rounded-card bg-white p-4 shadow-card">
+            <Link href={`/admin/customers/${customer.id}`} className="flex items-center gap-3">
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-light text-brand">{customer.type === "company" ? <Building2 className="h-5 w-5" aria-hidden /> : <User className="h-5 w-5" aria-hidden />}</span>
               <span className="min-w-0 flex-1">
-                <span className="block font-bold text-navy">{displayName(customer)}{customer.type === "company" && <span className="font-normal text-slate"> · {customer.name}</span>}</span>
+                <span className="block font-bold text-navy">{displayName(customer)}</span>
                 <span className="block truncate text-sm text-slate">{[customer.phone, customer.suburb || customer.address, `${theirs.length} job${theirs.length === 1 ? "" : "s"}`].filter(Boolean).join(" · ")}</span>
               </span>
               {latest && <StatusBadge status={latest.status} />}
-              {customer.marketingOptIn && <span className="hidden rounded-full bg-leaf-soft px-2 py-0.5 text-xs font-bold text-leaf-dark sm:inline">Offers OK</span>}
-              <ChevronRight className="h-5 w-5 text-slate" aria-hidden />
+              <ChevronRight className="h-5 w-5 shrink-0 text-slate" aria-hidden />
             </Link>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {customer.phone && <IconLink href={`tel:${customer.phone}`} label={`Call ${customer.name}`}><Phone className="h-4 w-4" aria-hidden /></IconLink>}
+              {customer.phone && <IconLink href={waLink(customer.phone, `Hi ${customer.name}, it's Spotless NT.`)} label={`WhatsApp ${customer.name}`} external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
+              <AddJobButton customers={customers} services={services} customerId={customer.id} size="sm" variant="outline" label="Add job" />
+            </div>
           </li>
         ))}
       </ul>
