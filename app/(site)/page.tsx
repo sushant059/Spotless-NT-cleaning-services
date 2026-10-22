@@ -1,24 +1,19 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Clock, MessageSquareText, Phone, ShieldCheck } from "lucide-react";
+import { ArrowRight, CalendarCheck, CheckCircle2, MessageSquareText, Phone, ShieldCheck, Star, ThumbsUp } from "lucide-react";
 import { BeforeAfter } from "@/components/before-after";
-import { CategoryShowcase, CtaBand, FaqList, GoogleReviewButton, Pillars, ReviewCard, SectionHeading, ServiceCard, TeamVisual, TrustMarquee } from "@/components/content";
-import { Bubbles } from "@/components/clean/bubbles";
-import { CountUp } from "@/components/clean/count-up";
-import { ProcessPath } from "@/components/clean/process-path";
-import { ScrubGame } from "@/components/clean/scrub-game";
-import { WipeReveal } from "@/components/clean/wipe-reveal";
+import { CtaBand, FaqList, GoogleReviewButton, ReviewCard, SectionHeading, ServiceCard, Steps, TeamVisual } from "@/components/content";
 import { FadeIn } from "@/components/fade-in";
-import { SuburbChecker, VideoShowcase } from "@/components/home/interactive";
+import { SuburbChecker } from "@/components/home/interactive";
 import { BackgroundVideo, Photo } from "@/components/photo";
 import { OfferCard } from "@/components/offers";
 import { ServiceIcon } from "@/components/icons";
-import { Sparkle } from "@/components/art/sparkle";
 import { whatsappHref } from "@/components/social";
-import { SERVICE_CATEGORIES } from "@/lib/constants";
-import { categoryStock, STOCK, STOCK_CLIPS } from "@/lib/stock";
+import { serviceStock, STOCK, STOCK_CLIPS } from "@/lib/stock";
 import { getDb } from "@/lib/store";
 import { byOrder, filled } from "@/lib/utils";
 import { isOfferLive } from "@/lib/validators";
+
+const BOND_SLUG = "end-of-lease-and-bond-cleaning";
 
 export default async function HomePage() {
   const db = await getDb();
@@ -29,124 +24,164 @@ export default async function HomePage() {
   const reviews = byOrder(db.reviews).filter((review) => review.status === "approved").slice(0, 3);
   const faqs = byOrder(db.faqs).slice(0, 5);
   const [featured, ...moreResults] = results;
+  const bond = services.find((service) => service.slug === BOND_SLUG);
+  const priced = services.filter((service) => filled(service.priceFrom));
   // Admin can set the hero to their own photo, or to a video file, which then plays instead of the stock clip.
   const heroIsPhoto = filled(s.heroImage) && !/\.(mp4|webm|mov)(\?|$)/i.test(s.heroImage);
 
   return (
     <>
-      {/* Hero: full-bleed video with the booking shortcuts on top */}
+      {/* Hero */}
       <section className="relative isolate overflow-hidden bg-navy-deep text-white">
         {heroIsPhoto ? (
           <Photo src={s.heroImage} fill priority sizes="100vw" className="-z-20" />
         ) : (
           <BackgroundVideo clip={STOCK_CLIPS[1]} src={s.heroImage} className="-z-20" />
         )}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy-deep via-navy-deep/80 to-navy-deep/20" aria-hidden />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-navy-deep via-transparent to-navy-deep/40" aria-hidden />
-        <Bubbles className="-z-10" />
-        <div className="container-x grid min-h-[calc(100svh-120px)] items-center gap-10 py-14 md:py-20 lg:grid-cols-[1.25fr_1fr]">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy-deep/95 via-navy-deep/75 to-navy-deep/30" aria-hidden />
+        <div className="container-x grid items-center gap-10 py-14 sm:py-20 lg:min-h-[640px] lg:grid-cols-[1.2fr_1fr] lg:gap-16 lg:py-24">
           <div className="animate-rise">
-            <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-sky-soft ring-1 ring-white/20 backdrop-blur">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-leaf" /> Taking bookings across Darwin & Palmerston
+            <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1.5 text-sm font-medium text-white/90 ring-1 ring-white/15 backdrop-blur">
+              <span className="h-2 w-2 rounded-full bg-leaf" /> Darwin & Palmerston · locally owned
             </p>
-            <h1 className="mt-6 font-display text-[42px] font-extrabold leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
-              {s.heroHeadline.split(" ").slice(0, -2).join(" ")}{" "}
-              <span className="relative whitespace-nowrap text-sky">
-                {s.heroHeadline.split(" ").slice(-2).join(" ")}
-                <Sparkle className="absolute -right-7 -top-4 hidden h-7 w-7 text-leaf sm:block" animated />
-              </span>
-            </h1>
-            <p className="mt-6 max-w-xl text-lg text-white/85 md:text-xl">{s.heroSubtext}</p>
+            <h1 className="mt-6 text-[40px] font-extrabold leading-[1.05] tracking-tight sm:text-6xl lg:text-[68px]">{s.heroHeadline}</h1>
+            <p className="mt-5 max-w-xl text-lg text-white/80 md:text-xl">{s.heroSubtext}</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/free-quote" className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-leaf-dark px-7 text-lg font-bold text-white shadow-[0_14px_30px_-12px_rgba(59,169,53,.9)] transition hover:bg-[#1d6a19]">Get a free quote <ArrowRight className="h-5 w-5" aria-hidden /></Link>
-              <button type="button" data-open-chat className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-white/95 px-7 text-lg font-bold text-navy transition hover:bg-white"><MessageSquareText className="h-5 w-5" aria-hidden /> Book in chat</button>
+              <Link href="/free-quote" className="press inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-leaf px-7 text-lg font-bold text-white transition hover:bg-leaf-dark">Get a free quote <ArrowRight className="h-5 w-5" aria-hidden /></Link>
+              <button type="button" data-open-chat className="press inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-white px-7 text-lg font-bold text-navy transition hover:bg-brand-light"><MessageSquareText className="h-5 w-5" aria-hidden /> Book in chat</button>
             </div>
-            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold text-white/85">
-              <span className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-leaf" aria-hidden /> Fixed price, no call-out fee</span>
-              <span className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-leaf" aria-hidden /> Kid & pet friendly</span>
+            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-[15px] font-medium text-white/85">
+              <span className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-leaf" aria-hidden /> Fixed price upfront</span>
+              <span className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-leaf" aria-hidden /> Kid & pet safe</span>
               <a href={`tel:${s.phoneTel}`} className="flex items-center gap-2 hover:text-white"><Phone className="h-5 w-5 text-leaf" aria-hidden /> {s.phoneDisplay}</a>
             </div>
           </div>
 
-          {/* Quick picker */}
-          <div className="rounded-[28px] bg-white/10 p-4 ring-1 ring-white/20 backdrop-blur-md sm:p-5">
-            <p className="flex items-center justify-between gap-3 px-1 font-display text-lg font-bold">What needs cleaning? <Clock className="h-5 w-5 text-sky" aria-hidden /></p>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {SERVICE_CATEGORIES.map((category) => (
-                <Link key={category.id} href={`/services#${category.id}`} className="group relative isolate flex aspect-[4/3] flex-col justify-end overflow-hidden rounded-2xl p-3 ring-1 ring-white/15">
-                  <Photo stock={categoryStock(category.id)} alt="" fill sizes="(max-width: 1024px) 45vw, 20vw" className="-z-20 transition duration-700 group-hover:scale-110" />
-                  <span className="absolute inset-0 -z-10 bg-gradient-to-t from-navy-deep/95 via-navy-deep/40 to-transparent" aria-hidden />
-                  <ServiceIcon name={category.icon} className="h-5 w-5 text-sky" />
-                  <span className="mt-1 font-display text-[15px] font-bold leading-tight sm:text-base">{category.title}</span>
-                </Link>
-              ))}
-            </div>
-            <Link href="/booking" className="mt-3 flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-white font-bold text-navy hover:bg-brand-light">Pick a date & time <ArrowRight className="h-4 w-4" aria-hidden /></Link>
-          </div>
-        </div>
-
-        {/* Promise strip */}
-        <div className="border-t border-white/15 bg-navy-deep/60 backdrop-blur">
-          <dl className="container-x grid grid-cols-2 gap-y-4 py-5 md:grid-cols-4">
-            {[
-              [`${services.length}`, "specialist services"],
-              [`${s.serviceAreas.length}+`, "suburbs covered"],
-              ["$0", "call-out for a quote"],
-              ["4–8 hrs", "typical carpet drying"],
-            ].map(([value, label]) => (
-              <div key={label} className="px-2 text-center md:border-l md:border-white/15 md:first:border-l-0">
-                <dd className="font-display text-2xl font-extrabold text-white md:text-3xl"><CountUp value={value} /></dd>
-                <dt className="text-sm text-white/70">{label}</dt>
+          {/* Starting prices */}
+          {priced.length > 0 && (
+            <div className="rounded-[24px] bg-white p-5 text-ink shadow-soft sm:p-6">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-lg font-extrabold text-navy">Starting prices</p>
+                <Link href="/free-quote" className="text-sm font-semibold text-brand hover:underline">Exact quote</Link>
               </div>
-            ))}
-          </dl>
+              <ul className="mt-4 divide-y divide-line">
+                {priced.slice(0, 5).map((service, index) => (
+                  <li key={service.id}>
+                    <FadeIn from="right" delay={150 + index * 90}>
+                      <Link href={`/services/${service.slug}`} className="group flex items-center gap-3 py-3">
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-light text-brand transition group-hover:bg-brand group-hover:text-white"><ServiceIcon name={service.icon} className="h-5 w-5" /></span>
+                        <span className="min-w-0 flex-1 truncate font-semibold text-navy">{service.title}</span>
+                        <span className="shrink-0 text-right text-sm text-slate">from <b className="text-lg font-extrabold text-leaf-dark">{service.priceFrom}</b></span>
+                      </Link>
+                    </FadeIn>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs text-slate">Final price depends on size and condition. We confirm it before we start.</p>
+            </div>
+          )}
         </div>
       </section>
 
-      <TrustMarquee />
-
-      {/* Services by category */}
+      {/* Services */}
       <section className="section">
         <div className="container-x">
-          <SectionHeading eyebrow="What we clean" title="Every service, neatly sorted." lede="Pick a category to see exactly what’s included, how long it takes and real results." action={<Link href="/services" className="link-arrow">All services <ArrowRight className="h-4 w-4" aria-hidden /></Link>} />
-          <div className="mt-10"><CategoryShowcase services={services} /></div>
+          <SectionHeading eyebrow="Our services" title="What can we clean for you?" lede="Carpets, lounges, mattresses, rentals and offices. Every job gets a fixed price before we start." action={<Link href="/services" className="link-arrow">All services <ArrowRight className="h-4 w-4" aria-hidden /></Link>} />
+
+          {/* Phones: compact cards */}
+          <ul className="mt-8 grid gap-3 sm:hidden">
+            {services.map((service, index) => (
+              <li key={service.id}>
+                <FadeIn from={index % 2 ? "right" : "left"}>
+                  <Link href={`/services/${service.slug}`} className="card press flex items-center gap-3 p-2.5 pr-4">
+                    <span className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[14px] bg-mist"><Photo src={service.image} stock={serviceStock(service.slug)} fill sizes="72px" /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-bold leading-snug text-navy">{service.title}</span>
+                      {filled(service.priceFrom) ? <span className="mt-0.5 block text-sm text-slate">from <b className="font-extrabold text-leaf-dark">{service.priceFrom}</b></span> : <span className="mt-0.5 block text-sm text-slate">Free quote</span>}
+                    </span>
+                    <ArrowRight className="h-5 w-5 shrink-0 text-brand" aria-hidden />
+                  </Link>
+                </FadeIn>
+              </li>
+            ))}
+          </ul>
+
+          {/* Tablet and up: photo cards */}
+          <div className="mt-10 hidden gap-6 sm:grid sm:grid-cols-2 lg:grid-cols-3">
+            {services.map((service, index) => (
+              <FadeIn key={service.id} from="zoom" delay={(index % 3) * 110}><ServiceCard service={service} /></FadeIn>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* All services, swipeable on phones */}
-      <section className="section bg-mist">
-        <div className="container-x">
-          <SectionHeading eyebrow="Popular services" title="Pick a service, get a fixed price." action={<Link href="/free-quote" className="link-arrow">Get a quote <ArrowRight className="h-4 w-4" aria-hidden /></Link>} />
-        </div>
-        <div className="no-scrollbar mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 sm:px-6 lg:mx-auto lg:grid lg:max-w-7xl lg:grid-cols-3 lg:gap-6 lg:overflow-visible lg:px-8">
-          {services.slice(0, 6).map((service) => (
-            <div key={service.id} className="w-[82%] shrink-0 snap-start sm:w-[46%] lg:w-auto"><ServiceCard service={service} /></div>
-          ))}
-        </div>
-      </section>
-
-      <WipeReveal />
-
-      {/* Offers */}
-      {offers.length > 0 && (
-        <section className="section">
-          <div className="container-x">
-            <SectionHeading eyebrow="Current offers" title="Specials running right now" action={<Link href="/offers" className="link-arrow">All offers <ArrowRight className="h-4 w-4" aria-hidden /></Link>} />
-            <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {offers.slice(0, 3).map((offer, index) => <FadeIn key={offer.id} delay={index * 80}><OfferCard offer={offer} featured={index === 0} /></FadeIn>)}
-            </div>
+      {/* Bond cleaning spotlight */}
+      {bond && (
+        <section className="section bg-sand">
+          <div className="container-x grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+            <FadeIn from="left">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-card shadow-soft">
+                <Photo src={bond.image} stock={STOCK.bond} alt="An empty rental ready for inspection" fill sizes="(max-width: 1024px) 100vw, 50vw" />
+                {filled(bond.priceFrom) && (
+                  <div className="absolute bottom-4 left-4 rounded-2xl bg-white px-4 py-3 shadow-lift">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate">Starting from</p>
+                    <p className="text-3xl font-extrabold text-leaf-dark">{bond.priceFrom}</p>
+                  </div>
+                )}
+              </div>
+            </FadeIn>
+            <FadeIn from="right">
+              <p className="eyebrow"><span className="h-0.5 w-5 rounded-full bg-current" aria-hidden /> Moving out?</p>
+              <h2 className="h-section mt-3">Bond cleaning{filled(bond.priceFrom) ? <> from <span className="text-leaf-dark">{bond.priceFrom}</span></> : null}</h2>
+              <p className="lede">Inspection-ready carpets for your rental hand-back, with a receipt and a short job note you can pass to the property manager.</p>
+              <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+                {["Hot-water extraction, every room you book", "Lounge & mattress add-ons", "Receipt & job note for the agent", "Timed for your hand-back day"].map((item) => (
+                  <li key={item} className="flex items-center gap-3 font-medium text-navy"><CheckCircle2 className="h-5 w-5 shrink-0 text-leaf" aria-hidden /> {item}</li>
+                ))}
+              </ul>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link href={`/free-quote?service=${bond.slug}`} className="press inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-navy px-6 font-bold text-white hover:bg-navy-deep">Quote my bond clean <ArrowRight className="h-4 w-4" aria-hidden /></Link>
+                <Link href={`/services/${bond.slug}`} className="inline-flex min-h-12 items-center justify-center rounded-full border border-line bg-white px-6 font-bold text-navy hover:border-navy">What’s included</Link>
+              </div>
+            </FadeIn>
           </div>
         </section>
       )}
 
-      {/* Videos */}
-      <section className="section relative isolate overflow-hidden bg-navy text-white">
-        <div className="pointer-events-none absolute inset-0 -z-10 bg-grid" aria-hidden />
+      {/* Why us */}
+      <section className="section overflow-hidden">
+        <div className="container-x grid items-center gap-14 lg:grid-cols-2">
+          <FadeIn from="left"><TeamVisual photo={s.teamPhoto} /></FadeIn>
+          <div>
+            <SectionHeading eyebrow="Why Spotless NT" title="A local crew you’ll be happy to let in." lede="Uniformed, friendly and careful in your home. We work in Top End humidity every day, so our drying advice actually fits." />
+            <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4">
+              {[
+                [ShieldCheck, "Commercial-grade gear", "Truck-quality extractors, not a hire-shop machine."],
+                [ThumbsUp, "Honest, fixed pricing", "You hear the price before we start."],
+                [CalendarCheck, "Flexible times", "Early starts, Saturdays and same-day when free."],
+                [Star, "Straight talk", "If a stain is permanent, we tell you up front."],
+              ].map(([Icon, title, text], index) => {
+                const I = Icon as typeof ShieldCheck;
+                return (
+                  <FadeIn key={title as string} from="zoom" delay={index * 90}>
+                    <div className="card h-full p-4 transition duration-300 hover:-translate-y-1 hover:shadow-lift sm:p-5">
+                      <span className="grid h-10 w-10 place-items-center rounded-xl bg-leaf-soft text-leaf-dark sm:h-11 sm:w-11"><I className="h-5 w-5" aria-hidden /></span>
+                      <h3 className="mt-3 text-base font-bold leading-snug text-navy sm:mt-4 sm:text-lg">{title as string}</h3>
+                      <p className="mt-1 text-sm text-slate sm:text-[15px]">{text as string}</p>
+                    </div>
+                  </FadeIn>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="section bg-mist">
         <div className="container-x">
-          <p className="eyebrow text-sky"><Sparkle className="h-3 w-3 text-leaf" /> Watch us work</p>
-          <h2 className="mt-3 max-w-3xl font-display text-[32px] font-extrabold leading-[1.08] md:text-5xl">See the clean, service by service.</h2>
-          <p className="mt-4 max-w-2xl text-lg text-white/75">Short clips of carpets, lounges and homes coming back to life.</p>
-          <div className="mt-10"><VideoShowcase services={services} /></div>
+          <SectionHeading eyebrow="How it works" title="Booked in four easy steps." align="center" />
+          <div className="mt-10"><Steps /></div>
         </div>
       </section>
 
@@ -154,7 +189,7 @@ export default async function HomePage() {
       {featured && (
         <section className="section">
           <div className="container-x">
-            <SectionHeading eyebrow="Before & after" title="Drag the slider. See the difference." action={<Link href="/results" className="link-arrow">Full gallery <ArrowRight className="h-4 w-4" aria-hidden /></Link>} />
+            <SectionHeading eyebrow="Before & after" title="Drag the slider to see the difference." action={<Link href="/results" className="link-arrow">Full gallery <ArrowRight className="h-4 w-4" aria-hidden /></Link>} />
             <div className="mt-10 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
               <FadeIn>
                 <figure>
@@ -162,9 +197,9 @@ export default async function HomePage() {
                   <figcaption className="mt-3 font-semibold text-navy">{featured.caption}</figcaption>
                 </figure>
               </FadeIn>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="hidden gap-6 sm:grid sm:grid-cols-2 lg:grid-cols-1">
                 {moreResults.slice(0, 2).map((item, index) => (
-                  <FadeIn key={item.id} delay={index * 100}>
+                  <FadeIn key={item.id} delay={index * 120}>
                     <figure>
                       <BeforeAfter scene={item.scene || item.serviceSlug} beforeSrc={item.beforeImage} afterSrc={item.afterImage} beforeAlt={`Before: ${item.caption}`} afterAlt={`After: ${item.caption}`} />
                       <figcaption className="mt-2 text-sm font-semibold text-navy">{item.caption}</figcaption>
@@ -177,49 +212,25 @@ export default async function HomePage() {
         </section>
       )}
 
-      <ScrubGame />
-
-      {/* Team */}
-      <section className="section overflow-hidden bg-mist">
-        <div className="container-x grid items-center gap-14 lg:grid-cols-2">
-          <FadeIn><TeamVisual photo={s.teamPhoto} /></FadeIn>
-          <div>
-            <SectionHeading eyebrow="Why Spotless NT" title="A local crew you’ll be happy to let in." lede="Uniformed, friendly and careful in your home. Look for the Spotless NT logo on our shirts." />
-            <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-              {["Uniformed & easy to spot", "Commercial-grade equipment", "Fixed price before we start", "Honest about tough stains"].map((item) => (
-                <li key={item} className="flex items-center gap-3 rounded-2xl bg-mist p-3 font-semibold text-navy"><CheckCircle2 className="h-5 w-5 shrink-0 text-leaf-dark" aria-hidden /> {item}</li>
-              ))}
-            </ul>
-            <Link href="/why-us" className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-full bg-navy px-6 font-bold text-white hover:bg-navy-deep">Meet the team <ArrowRight className="h-4 w-4" aria-hidden /></Link>
+      {/* Offers */}
+      {offers.length > 0 && (
+        <section className="section bg-sand">
+          <div className="container-x">
+            <SectionHeading eyebrow="Current offers" title="Specials running right now" action={<Link href="/offers" className="link-arrow">All offers <ArrowRight className="h-4 w-4" aria-hidden /></Link>} />
+            <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {offers.slice(0, 3).map((offer, index) => <FadeIn key={offer.id} from="zoom" delay={index * 100}><OfferCard offer={offer} featured={index === 0} /></FadeIn>)}
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* How it works over a photo */}
-      <section className="section relative isolate overflow-hidden text-white">
-        <Photo stock={STOCK.crew} fill sizes="100vw" className="-z-20" />
-        <div className="absolute inset-0 -z-10 bg-navy-deep/85" aria-hidden />
-        <Bubbles className="-z-10" count={8} />
-        <div className="container-x">
-          <p className="eyebrow text-sky"><Sparkle className="h-3 w-3 text-leaf" /> How it works</p>
-          <h2 className="mt-3 font-display text-[32px] font-extrabold leading-[1.08] md:text-5xl">Booked in four easy steps.</h2>
-          <div className="mt-10 lg:mt-14"><ProcessPath /></div>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="container-x">
-          <SectionHeading eyebrow="Our promise" title="What you can count on, every visit." />
-          <div className="mt-10"><Pillars /></div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Reviews */}
-      <section className="section bg-mist">
+      <section className="section">
         <div className="container-x">
           <SectionHeading
             eyebrow="Reviews"
-            title="What Top End customers say"
+            title={reviews.length ? "What Top End customers say" : "Had a clean with us?"}
+            lede={reviews.length ? undefined : "We’re a new local business and every review helps. Tell other Darwin families how we went."}
             action={
               <div className="flex flex-wrap gap-3">
                 <Link href="/reviews#write" className="inline-flex min-h-12 items-center rounded-full bg-navy px-5 font-semibold text-white hover:bg-navy-deep">Leave a review</Link>
@@ -227,29 +238,30 @@ export default async function HomePage() {
               </div>
             }
           />
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
-            {reviews.map((review, index) => <FadeIn key={review.id} delay={index * 80}><ReviewCard review={review} /></FadeIn>)}
-          </div>
-          {reviews.length === 0 && <p className="mt-10 card p-6 text-slate">Be the first to leave a review.</p>}
+          {reviews.length > 0 && (
+            <div className="mt-10 grid gap-5 md:grid-cols-3">
+              {reviews.map((review, index) => <FadeIn key={review.id} from="zoom" delay={index * 100}><ReviewCard review={review} /></FadeIn>)}
+            </div>
+          )}
         </div>
       </section>
 
       {/* Areas */}
-      <section className="section">
+      <section className="section bg-mist">
         <div className="container-x grid gap-10 lg:grid-cols-2 lg:items-center">
           <div>
             <SectionHeading eyebrow="Service area" title="Darwin, Palmerston & the rural area." lede="From the CBD to Humpty Doo. If you’re just outside, ask. We’ll give you a straight yes or no." />
             <div className="mt-6 flex flex-wrap gap-2">
-              {s.serviceAreas.slice(0, 14).map((area) => <span key={area} className="chip border border-line bg-white text-navy">{area}</span>)}
-              <span className="chip bg-brand-light text-brand">+{Math.max(0, s.serviceAreas.length - 14)} more</span>
+              {s.serviceAreas.slice(0, 12).map((area) => <span key={area} className="chip border border-line bg-white text-navy">{area}</span>)}
+              {s.serviceAreas.length > 12 && <span className="chip bg-brand-light text-brand">+{s.serviceAreas.length - 12} more</span>}
             </div>
           </div>
-          <SuburbChecker areas={s.serviceAreas} />
+          <FadeIn from="right"><SuburbChecker areas={s.serviceAreas} /></FadeIn>
         </div>
       </section>
 
       {/* FAQ */}
-      <section className="section bg-mist">
+      <section className="section">
         <div className="container-x grid gap-10 lg:grid-cols-[1fr_1.5fr]">
           <div>
             <SectionHeading eyebrow="FAQs" title="Good questions, straight answers." />

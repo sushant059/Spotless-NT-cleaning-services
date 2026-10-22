@@ -1,27 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { ToastProvider } from "@/components/ui/toaster";
 import { getDb } from "@/lib/store";
 import { siteUrl } from "@/lib/utils";
 import "./globals.css";
 
-const display = Bricolage_Grotesque({
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
-  variable: "--font-display",
-  display: "swap",
-});
-
+// One clean, friendly typeface for everything; headings just use heavier weights.
 const body = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
   variable: "--font-body",
   display: "swap",
 });
 
 export const dynamic = "force-dynamic";
 
-export const viewport: Viewport = { themeColor: "#0B2F5E" };
+export const viewport: Viewport = { themeColor: "#0F2D4F" };
 
 export async function generateMetadata(): Promise<Metadata> {
   const db = await getDb();
@@ -50,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
       </head>
-      <body className={`${display.variable} ${body.variable} font-sans antialiased`}>
+      <body className={`${body.variable} font-sans antialiased`}>
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, Briefcase, CalendarDays, Inbox, MessageSquareQuote, Receipt, Send, TrendingUp, UserPlus } from "lucide-react";
+import { ArrowRight, Briefcase, CalendarDays, Inbox, MessageSquareQuote, Receipt, Send, TrendingUp } from "lucide-react";
 import { AddJobButton } from "@/components/admin/add-job";
-import { StatusBadge } from "@/components/admin/customers";
+import { AddCustomerButton, StatusBadge } from "@/components/admin/customers";
+import { EnquiryActions } from "@/components/admin/enquiries";
+import { enquiryRows } from "@/lib/enquiry-rows";
 import { DataStatus } from "@/components/admin/data-status";
 import { sheetsEnabled } from "@/lib/sheets";
 import { timeWindowLabel } from "@/lib/constants";
@@ -17,10 +19,8 @@ export default async function DashboardPage() {
     const customer = db.customers.find((item) => item.id === id);
     return customer ? customer.companyName || customer.name : "—";
   };
-  const waiting = [
-    ...db.leads.filter((item) => item.status === "new").map((item) => ({ id: item.id, when: item.createdAt, name: item.name, phone: item.phone, what: item.summary || item.message, ref: item.reference, kind: item.source === "chat" ? "Chat" : item.source === "quote" ? "Quote" : "Message" })),
-    ...db.bookings.filter((item) => item.status === "new").map((item) => ({ id: item.id, when: item.createdAt, name: item.name, phone: item.phone, what: `${item.summary} · ${formatDisplayDate(item.date)}`, ref: item.reference, kind: "Booking" })),
-  ].sort((a, b) => b.when.localeCompare(a.when));
+  // New website enquiries that haven't been booked yet: book the job or save the customer right here.
+  const waiting = enquiryRows(db).filter((row) => row.status === "new" && (!row.job || row.job.status === "requested"));
   const todays = db.jobs.filter((job) => job.scheduledDate === today && job.status !== "cancelled").sort((a, b) => a.timeWindow.localeCompare(b.timeWindow));
   const upcoming = db.jobs.filter((job) => job.scheduledDate > today && !["cancelled", "done"].includes(job.status)).sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate)).slice(0, 5);
   const week = [...db.leads, ...db.bookings].filter((item) => new Date(item.createdAt).getTime() >= weekAgo).length;
@@ -40,7 +40,7 @@ export default async function DashboardPage() {
       {/* Quick actions */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <AddJobButton customers={db.customers} services={services} label="Add job" className="h-full min-h-14 w-full rounded-2xl" />
-        <Link href="/admin/customers?add=1" className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-white font-semibold text-navy shadow-card hover:ring-2 hover:ring-brand/30"><UserPlus className="h-4 w-4 text-brand" aria-hidden /> Add customer</Link>
+        <AddCustomerButton className="h-full w-full" />
         <Link href="/admin/invoices/new" className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-white font-semibold text-navy shadow-card hover:ring-2 hover:ring-brand/30"><Receipt className="h-4 w-4 text-brand" aria-hidden /> New invoice</Link>
         <Link href="/admin/messages" className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-white font-semibold text-navy shadow-card hover:ring-2 hover:ring-brand/30"><Send className="h-4 w-4 text-brand" aria-hidden /> Send offer</Link>
       </div>
@@ -66,19 +66,22 @@ export default async function DashboardPage() {
             <h2 className="flex items-center gap-2 text-xl font-bold text-navy"><Inbox className="h-5 w-5 text-[#8A5A00]" aria-hidden /> Waiting for a reply</h2>
             <Link href="/admin/leads" className="text-sm font-semibold text-brand">Open enquiries</Link>
           </div>
-          {waiting.length === 0 && <p className="mt-3 text-slate">All caught up. New enquiries appear here as soon as they arrive.</p>}
+          {waiting.length === 0 && <p className="mt-3 text-slate">All caught up. New enquiries from the website appear here as soon as they arrive.</p>}
           <ul className="mt-3 divide-y divide-line">
-            {waiting.slice(0, 6).map((item) => (
-              <li key={item.id} className="flex items-start gap-3 py-3">
-                <span className="mt-0.5 shrink-0 rounded-full bg-sun-soft px-2 py-0.5 text-xs font-bold text-[#8A5A00]">{item.kind}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold text-navy">{item.name} <span className="text-xs font-normal text-slate">{formatDisplayDateTime(item.when)}</span></span>
-                  <span className="block truncate text-sm text-slate">{item.what}</span>
-                </span>
-                {item.phone && <a href={`tel:${item.phone}`} className="shrink-0 rounded-full bg-mist px-3 py-1.5 text-xs font-bold text-navy hover:bg-brand-light">Call</a>}
+            {waiting.slice(0, 6).map((row) => (
+              <li key={row.id} className="py-3.5">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 shrink-0 rounded-full bg-sun-soft px-2 py-0.5 text-xs font-bold text-[#8A5A00]">{row.source}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold text-navy">{row.name || "No name"} <span className="text-xs font-normal text-slate">{formatDisplayDateTime(row.createdAt)}</span></span>
+                    <span className="block text-sm text-slate">{[row.summary, row.suburb, row.wanted].filter(Boolean).join(" · ")}</span>
+                  </span>
+                </div>
+                <div className="mt-2.5 flex flex-wrap items-center gap-2 pl-0 sm:pl-[72px]"><EnquiryActions row={row} /></div>
               </li>
             ))}
           </ul>
+          {waiting.length > 6 && <Link href="/admin/leads" className="mt-2 inline-block text-sm font-semibold text-brand">See all {waiting.length} →</Link>}
         </section>
 
         <section className="rounded-card bg-white p-5 shadow-card">

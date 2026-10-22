@@ -11,7 +11,6 @@ export function Footer({ settings, services }: { settings: Settings; services: S
   const visible = byOrder(services).filter((service) => service.visible);
   return (
     <footer className="relative overflow-hidden bg-navy-deep text-white">
-      <div className="pointer-events-none absolute inset-0 bg-grid opacity-60" aria-hidden />
       <Sparkle className="pointer-events-none absolute -right-10 -top-10 h-64 w-64 text-white/[0.03]" />
       <div className="container-x relative">
         <div className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1.2fr]">

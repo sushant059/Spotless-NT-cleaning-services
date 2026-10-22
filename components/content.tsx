@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, CalendarCheck, Droplets, MapPin, PawPrint, ShieldCheck, Sparkles, Star, ThumbsUp } from "lucide-react";
-import { Bubbles } from "@/components/clean/bubbles";
 import { Photo } from "@/components/photo";
 import { FadeIn } from "@/components/fade-in";
 import { ServiceIcon } from "@/components/icons";
@@ -29,7 +28,7 @@ export function PageHero({ eyebrow, title, lede, children, crumbs, image = STOCK
             </ol>
           </nav>
         )}
-        <p className="eyebrow text-sky"><Sparkle className="h-3 w-3" /> {eyebrow}</p>
+        <p className="eyebrow text-sky"><span className="h-0.5 w-5 rounded-full bg-current" aria-hidden /> {eyebrow}</p>
         <h1 className="mt-4 max-w-4xl font-display text-[40px] font-extrabold leading-[1.04] md:text-6xl">{title}</h1>
         <p className="mt-5 max-w-2xl text-lg text-white/75">{lede}</p>
         {children}
@@ -43,7 +42,7 @@ export function SectionHeading({ eyebrow, title, lede, align = "left", action }:
   return (
     <div className={cn("flex flex-wrap items-end justify-between gap-6", align === "center" && "flex-col items-center text-center")}>
       <div className={cn(align === "center" && "flex flex-col items-center")}>
-        <p className="eyebrow"><Sparkle className="h-3 w-3 text-leaf" /> {eyebrow}</p>
+        <p className="eyebrow"><span className="h-0.5 w-5 rounded-full bg-current" aria-hidden /> {eyebrow}</p>
         <h2 className="h-section mt-3 max-w-3xl">{title}</h2>
         {lede && <p className="lede">{lede}</p>}
       </div>
@@ -120,12 +119,12 @@ export function TrustMarquee() {
 
 export function ServiceCard({ service, className }: { service: Service; className?: string }) {
   return (
-    <Link href={`/services/${service.slug}`} className={cn("group card flex h-full flex-col overflow-hidden transition duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-soft", className)}>
+    <Link href={`/services/${service.slug}`} className={cn("group card flex h-full flex-col overflow-hidden transition duration-300 ease-out hover:-translate-y-1.5 hover:shadow-lift", className)}>
       <div className="relative aspect-[4/3] overflow-hidden bg-mist">
         <Photo src={service.image} stock={serviceStock(service.slug)} alt={service.title} fill sizes="(max-width: 640px) 85vw, (max-width: 1024px) 45vw, 30vw" className="transition duration-700 group-hover:scale-105" />
-        <div className="absolute inset-0 bg-gradient-to-t from-navy-deep/70 via-transparent to-transparent" aria-hidden />
+        <div className="absolute inset-0 bg-gradient-to-t from-navy-deep/50 via-transparent to-transparent" aria-hidden />
         <span className="absolute left-4 top-4 grid h-11 w-11 place-items-center rounded-2xl bg-white/95 text-brand shadow-card"><ServiceIcon name={service.icon} className="h-5 w-5" /></span>
-        {filled(service.priceFrom) && <span className="absolute bottom-4 left-4 rounded-full bg-leaf-dark px-3 py-1 text-sm font-bold text-white">From {service.priceFrom}</span>}
+        {filled(service.priceFrom) && <span className="absolute bottom-4 left-4 rounded-full bg-white px-3 py-1 text-sm font-semibold text-navy shadow-card">from <b className="text-base font-extrabold text-leaf-dark">{service.priceFrom}</b></span>}
       </div>
       <div className="flex flex-1 flex-col p-5">
         <h3 className="font-display text-xl font-bold text-navy">{service.title}</h3>
@@ -216,10 +215,12 @@ export function Steps({ tone = "light" }: { tone?: "light" | "dark" }) {
     <ol className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {steps.map(([title, text], index) => (
         <FadeIn key={title} delay={index * 80}>
-          <li className={cn("relative h-full rounded-card p-6", tone === "dark" ? "bg-white/[0.06] ring-1 ring-white/10" : "card")}>
-            <span className={cn("font-display text-5xl font-extrabold", tone === "dark" ? "text-sky" : "text-brand/20")}>0{index + 1}</span>
-            <h3 className={cn("mt-3 font-display text-xl font-bold", tone === "dark" ? "text-white" : "text-navy")}>{title}</h3>
-            <p className={cn("mt-2", tone === "dark" ? "text-white/70" : "text-slate")}>{text}</p>
+          <li className={cn("relative flex h-full gap-4 rounded-card p-5 transition duration-300 hover:-translate-y-1 md:block md:p-6", tone === "dark" ? "bg-white/[0.06] ring-1 ring-white/10" : "card hover:shadow-lift")}>
+            <span className={cn("grid h-11 w-11 shrink-0 place-items-center rounded-full text-lg font-extrabold md:h-12 md:w-12", tone === "dark" ? "bg-sky/20 text-sky" : "bg-brand-light text-brand")}>{index + 1}</span>
+            <span className="block min-w-0">
+              <h3 className={cn("font-display text-lg font-bold md:mt-4 md:text-xl", tone === "dark" ? "text-white" : "text-navy")}>{title}</h3>
+              <p className={cn("mt-1 md:mt-2", tone === "dark" ? "text-white/70" : "text-slate")}>{text}</p>
+            </span>
           </li>
         </FadeIn>
       ))}
@@ -277,18 +278,16 @@ export function CtaBand({ settings }: { settings: Settings }) {
   return (
     <section className="section">
       <div className="container-x">
-        <div className="relative isolate overflow-hidden rounded-[32px] p-7 text-white sm:p-10 md:rounded-[40px] md:p-14">
+        <div className="relative isolate overflow-hidden rounded-[28px] p-7 text-white sm:p-10 md:p-14">
           <Photo stock={STOCK.living} fill sizes="100vw" className="-z-20" />
-          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy-deep via-navy-deep/90 to-brand/70" aria-hidden />
-          <Bubbles className="-z-10" count={9} />
-          <Sparkle className="absolute right-10 top-10 hidden h-12 w-12 text-sky md:block" animated />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy-deep via-navy-deep/90 to-navy/60" aria-hidden />
           <div className="relative grid gap-8 md:grid-cols-[1.4fr_1fr] md:items-center">
             <div>
               <h2 className="font-display text-[34px] font-extrabold leading-tight md:text-5xl">Let’s make it spotless.</h2>
               <p className="mt-4 max-w-xl text-lg text-white/80">Tell us what needs cleaning and get a fixed price, usually the same day. No call-out fee for a quote.</p>
             </div>
             <div className="flex flex-col gap-3">
-              <Link href="/free-quote" className="inline-flex min-h-14 items-center justify-center rounded-full bg-leaf-dark px-6 text-lg font-bold text-white hover:bg-[#1d6a19]">Get my free quote</Link>
+              <Link href="/free-quote" className="inline-flex min-h-14 items-center justify-center rounded-full bg-leaf-dark px-6 text-lg font-bold text-white hover:bg-leaf">Get my free quote</Link>
               <button type="button" data-open-chat className="inline-flex min-h-14 items-center justify-center rounded-full bg-white px-6 text-lg font-bold text-navy hover:bg-brand-light">Chat with us now</button>
               <a href={`tel:${settings.phoneTel}`} className="text-center font-semibold text-white/85 hover:text-white">or call {settings.phoneDisplay}</a>
             </div>

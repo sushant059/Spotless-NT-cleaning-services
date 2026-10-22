@@ -469,6 +469,7 @@ const settingsSchema = z.object({
     bankAccountName: z.string().trim().max(80),
     bsb: z.string().trim().max(10).refine((value) => value === "" || /^\d{3}-?\d{3}$/.test(value), "BSB is 6 digits, like 062-000"),
     accountNumber: z.string().trim().max(20).refine((value) => value === "" || /^[\d ]{5,12}$/.test(value), "Account number is 5–10 digits"),
+    payId: z.string().trim().max(120).default(""),
     footer: z.string().trim().max(300),
   }),
 });
@@ -1357,7 +1358,7 @@ function invoiceLink(invoice: Invoice) {
 
 function bankLines(settings: Settings) {
   const bank = settings.invoice;
-  return [bank.bankAccountName && `Account name: ${bank.bankAccountName}`, bank.bsb && `BSB: ${bank.bsb}`, bank.accountNumber && `Account: ${bank.accountNumber}`].filter(Boolean).join("\n");
+  return [bank.bankAccountName && `Account name: ${bank.bankAccountName}`, bank.bsb && `BSB: ${bank.bsb}`, bank.accountNumber && `Account: ${bank.accountNumber}`, bank.payId && `PayID: ${bank.payId}`].filter(Boolean).join("\n");
 }
 
 /** Emails or texts the invoice link straight from the website, then marks it sent. */

@@ -573,6 +573,9 @@ export function SettingsEditor({ settings, localMode }: { settings: Settings; lo
             <Input id="inv-account" inputMode="numeric" className="mt-1 font-normal" value={current.invoice.accountNumber} onChange={(event) => set({ invoice: { ...current.invoice, accountNumber: event.target.value } })} />
           </label>
         </div>
+        <label className="block text-sm font-semibold text-navy" htmlFor="inv-payid">PayID (optional)
+          <Input id="inv-payid" placeholder="e.g. 04xx xxx xxx or pay@yourbusiness.com.au" className="mt-1 font-normal" value={current.invoice.payId} onChange={(event) => set({ invoice: { ...current.invoice, payId: event.target.value } })} />
+        </label>
         <label className="block text-sm font-semibold text-navy" htmlFor="inv-footer">Thank-you line at the bottom
           <Input id="inv-footer" className="mt-1 font-normal" value={current.invoice.footer} onChange={(event) => set({ invoice: { ...current.invoice, footer: event.target.value } })} />
         </label>

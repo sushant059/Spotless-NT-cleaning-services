@@ -5,9 +5,9 @@ import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 /** Wraps content that fades up when scrolled into view. Visible by default without JS. */
-export function FadeIn({ children, className, delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+export function FadeIn({ children, className, delay = 0, from = "up" }: { children: React.ReactNode; className?: string; delay?: number; from?: "up" | "left" | "right" | "zoom" }) {
   return (
-    <div data-reveal className={cn("min-w-0", className)} style={delay ? { transitionDelay: `${delay}ms` } : undefined}>
+    <div data-reveal={from} className={cn("min-w-0", className)} style={delay ? { transitionDelay: `${delay}ms` } : undefined}>
       {children}
     </div>
   );

@@ -1,21 +1,22 @@
 import type { Config } from "tailwindcss";
 
-// Brand tokens. Every colour is sampled from the Spotless NT logo:
-// the roof (navy), the vacuum (blue), the sparkles (sky) and the swoosh (leaf).
+// Brand tokens, taken from the Spotless NT logo (roof navy, vacuum blue, swoosh green),
+// toned down for a calm, clean look. "sand" is a warm off-white for alternating sections.
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        navy: { DEFAULT: "#0B2F5E", deep: "#061C3A", soft: "#16407A" },
-        brand: { DEFAULT: "#0067B1", dark: "#00508C", light: "#E8F2FB" },
-        sky: { DEFAULT: "#2E9BEA", soft: "#D6ECFC" },
-        leaf: { DEFAULT: "#3BA935", dark: "#24801F", soft: "#E3F5DF" },
-        sun: { DEFAULT: "#FFB547", soft: "#FFF2DC" },
-        ink: "#0C1B2F",
-        slate: "#4A5D75",
-        mist: "#F3F7FC",
-        line: "#DCE6F2",
+        navy: { DEFAULT: "#0F2D4F", deep: "#0A1F38", soft: "#1B4170" },
+        brand: { DEFAULT: "#1F63B4", dark: "#174E8F", light: "#EEF4FB" },
+        sky: { DEFAULT: "#5AA6E6", soft: "#E1EEFB" },
+        leaf: { DEFAULT: "#2F9E4F", dark: "#217A3A", soft: "#E7F5EB" },
+        sun: { DEFAULT: "#F2B544", soft: "#FDF4DF" },
+        ink: "#13202F",
+        slate: "#566476",
+        mist: "#F5F7FA",
+        line: "#E5EAF0",
+        sand: "#FAF8F4",
         danger: "#C6362F",
         whatsapp: "#25D366",
       },
@@ -24,13 +25,14 @@ const config: Config = {
         display: ["var(--font-display)", "var(--font-body)", "sans-serif"],
       },
       borderRadius: {
-        card: "28px",
+        card: "20px",
         input: "14px",
       },
       boxShadow: {
-        soft: "0 24px 60px -20px rgba(11, 47, 94, 0.28)",
-        card: "0 10px 30px -12px rgba(11, 47, 94, 0.16)",
-        glow: "0 0 0 6px rgba(46, 155, 234, 0.15)",
+        soft: "0 20px 50px -24px rgba(15, 32, 52, 0.30)",
+        card: "0 1px 2px rgba(15, 32, 52, 0.04), 0 8px 24px -14px rgba(15, 32, 52, 0.18)",
+        lift: "0 2px 4px rgba(15, 32, 52, 0.05), 0 24px 48px -22px rgba(15, 32, 52, 0.35)",
+        glow: "0 0 0 6px rgba(31, 99, 180, 0.12)",
       },
       keyframes: {
         twinkle: { "0%,100%": { opacity: "1", transform: "scale(1) rotate(0deg)" }, "50%": { opacity: ".45", transform: "scale(.75) rotate(20deg)" } },

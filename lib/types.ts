@@ -73,6 +73,8 @@ export type InvoiceSettings = {
   bankAccountName: string;
   bsb: string;
   accountNumber: string;
+  /** Optional PayID (email, mobile or ABN) customers can pay to. */
+  payId: string;
   /** Printed at the bottom of every invoice, e.g. "Thanks for choosing Spotless NT". */
   footer: string;
 };

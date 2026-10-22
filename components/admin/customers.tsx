@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Camera, ChevronRight, MessageCircle, Phone, Plus, Search, User } from "lucide-react";
+import { Building2, Camera, ChevronRight, MessageCircle, Phone, Plus, Search, User, UserPlus } from "lucide-react";
 import { deleteCustomerAction, deleteJobAction, saveCustomerAction, saveJobAction } from "@/lib/actions";
 import { uploadFile } from "@/components/admin/upload";
 import { AddJobButton, type ServiceOption } from "@/components/admin/add-job";
-import { FilterChips, IconLink } from "@/components/admin/kit";
+import { FilterChips, IconLink, Sheet } from "@/components/admin/kit";
 import { MediaImage } from "@/components/media-image";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -152,7 +152,23 @@ export function CustomersBoard({ customers, jobs, services = [], startAdding = f
 
 /* --------------------------------- Customer -------------------------------- */
 
-export function CustomerForm({ initial, onDone }: { initial: Customer; onDone?: (id: string) => void }) {
+/** "+ Add customer" in a pop-up sheet: name and mobile are enough, the rest is optional. Opens the new customer when saved. */
+export function AddCustomerButton({ className, label = "Add customer" }: { className?: string; label?: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={setOpen}
+      title="Add a customer"
+      description="Name and mobile are enough. You can add jobs and invoices from their page."
+      trigger={<button type="button" className={cn("flex min-h-14 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-white px-4 font-semibold text-navy shadow-card hover:ring-2 hover:ring-brand/30", className)}><UserPlus className="h-4 w-4 text-brand" aria-hidden /> {label}</button>}
+    >
+      <CustomerForm initial={emptyCustomer()} bare onDone={() => setOpen(false)} />
+    </Sheet>
+  );
+}
+
+export function CustomerForm({ initial, onDone, bare = false }: { initial: Customer; onDone?: (id: string) => void; bare?: boolean }) {
   const router = useRouter();
   const toast = useToast();
   const [pending, start] = useTransition();
@@ -160,7 +176,7 @@ export function CustomerForm({ initial, onDone }: { initial: Customer; onDone?: 
   const set = (patch: Partial<Customer>) => setCurrent((value) => ({ ...value, ...patch }));
   return (
     <form
-      className="grid gap-4 rounded-card bg-white p-5 shadow-card"
+      className={cn("grid gap-4", !bare && "rounded-card bg-white p-5 shadow-card")}
       onSubmit={(event) => {
         event.preventDefault();
         start(async () => {

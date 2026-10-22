@@ -181,6 +181,11 @@ function StatusSelect({ row }: { row: EnquiryRow }) {
 }
 
 /** Add as customer · Add job · call · WhatsApp. Once the job is booked, the buttons become links to it. */
+/** Add as customer, book the job, call or WhatsApp: the same buttons as the enquiries table. */
+export function EnquiryActions({ row }: { row: EnquiryRow }) {
+  return <RowActions row={row} wide />;
+}
+
 function RowActions({ row, wide = false }: { row: EnquiryRow; wide?: boolean }) {
   const router = useRouter();
   const toast = useToast();
@@ -231,7 +236,7 @@ function BookJobButton({ row, wide }: { row: EnquiryRow; wide: boolean }) {
       onOpenChange={setOpen}
       title={`Book the job for ${row.name || "this enquiry"}`}
       description={`${row.reference} · ${row.phone || row.email}`}
-      trigger={<button type="button" className={cn("inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-leaf-dark px-3 text-xs font-bold text-white hover:bg-[#1d6a19]", wide && "min-h-10 text-sm")}><CalendarPlus className="h-4 w-4" aria-hidden /> Add job</button>}
+      trigger={<button type="button" className={cn("inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-leaf-dark px-3 text-xs font-bold text-white hover:bg-[#1d6a19]", wide && "min-h-10 text-sm")}><CalendarPlus className="h-4 w-4" aria-hidden /> Book job</button>}
     >
       <form className="grid gap-3 sm:grid-cols-2" onSubmit={(event) => {
         event.preventDefault();

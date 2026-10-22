@@ -109,7 +109,8 @@ export function normalizeDb(db: Database): Database {
   db.invoices = Array.isArray(db.invoices) ? db.invoices : [];
   db.settings.invoice = { ...fresh.settings.invoice, ...(db.settings.invoice ?? {}) };
   db.bookings = db.bookings.map((booking) => ({ ...booking, promoCode: booking.promoCode ?? "", promoMessage: booking.promoMessage ?? "" }));
-  db.reviews = db.reviews.map((review) => {
+  // Placeholder reviews from early builds are dropped; the next save removes them from Supabase too.
+  db.reviews = db.reviews.filter((review) => review.source !== "sample").map((review) => {
     const legacy = review as Review & { visible?: boolean };
     return {
       ...review,
