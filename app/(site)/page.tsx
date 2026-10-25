@@ -153,7 +153,7 @@ export default async function HomePage() {
         <div className="container-x grid items-center gap-14 lg:grid-cols-2">
           <FadeIn from="left"><TeamVisual photo={s.teamPhoto} /></FadeIn>
           <div>
-            <SectionHeading eyebrow="Why Spotless NT" title="A local crew you’ll be happy to let in." lede="Uniformed, friendly and careful in your home. We work in Top End humidity every day, so our drying advice actually fits." />
+            <SectionHeading eyebrow="Why Territory Spotless" title="A local crew you’ll be happy to let in." lede="Uniformed, friendly and careful in your home. We work in Top End humidity every day, so our drying advice actually fits." />
             <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4">
               {[
                 [ShieldCheck, "Commercial-grade gear", "Truck-quality extractors, not a hire-shop machine."],

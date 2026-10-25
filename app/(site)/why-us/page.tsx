@@ -16,12 +16,12 @@ export default async function WhyUsPage() {
   const s = db.settings;
   return (
     <>
-      <PageHero image={STOCK.crew} eyebrow="About Spotless NT" title="Cleaner spaces. Healthier lives." lede="We’re a locally owned Darwin cleaning business. We price the job before we start and tell you honestly what a clean can and can’t do." crumbs={[{ href: "/why-us", label: "About" }]} />
+      <PageHero image={STOCK.crew} eyebrow="About Territory Spotless" title="Cleaner spaces. Healthier lives." lede="We’re a locally owned Darwin cleaning business. We price the job before we start and tell you honestly what a clean can and can’t do." crumbs={[{ href: "/why-us", label: "About" }]} />
       <section className="section pt-12">
         <div className="container-x grid items-center gap-12 lg:grid-cols-2">
           <TeamVisual photo={s.teamPhoto} />
           <div>
-            <SectionHeading eyebrow="The team" title="You’ll know exactly who’s at the door." lede="Our crew wears navy Spotless NT shirts with the logo on the chest and back, and arrives in a sign-written vehicle with commercial gear." />
+            <SectionHeading eyebrow="The team" title="You’ll know exactly who’s at the door." lede="Our crew wears navy Territory Spotless shirts with the logo on the chest and back, and arrives in a sign-written vehicle with commercial gear." />
             <ul className="mt-6 space-y-3">
               {["Friendly, uniformed technicians", "Trained on fibre, fabric and stain types", "Careful with furniture, floors and pets", "Clear drying advice before we leave"].map((item) => (
                 <li key={item} className="flex items-center gap-3 font-semibold text-navy"><CheckCircle2 className="h-5 w-5 text-leaf-dark" aria-hidden /> {item}</li>
@@ -42,7 +42,7 @@ export default async function WhyUsPage() {
       </section>
       <section className="section bg-mist">
         <div className="container-x">
-          <SectionHeading eyebrow="Our uniform" title="Look for the logo." lede="Every technician wears the Spotless NT shirt, so you can spot us before we knock." align="center" />
+          <SectionHeading eyebrow="Our uniform" title="Look for the logo." lede="Every technician wears the Territory Spotless shirt, so you can spot us before we knock." align="center" />
           <div className="mx-auto mt-10 max-w-3xl rounded-card bg-white p-6 shadow-card md:p-10"><UniformMockup phone={s.phoneDisplay} className="w-full" /></div>
         </div>
       </section>

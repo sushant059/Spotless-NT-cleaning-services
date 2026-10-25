@@ -2,7 +2,7 @@
   "name": "spotless-nt",
   "version": "1.0.0",
   "private": true,
-  "description": "Spotless NT Cleaning Services website and admin panel.",
+  "description": "Territory Spotless Cleaning Services website and admin panel.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

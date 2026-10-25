@@ -125,7 +125,7 @@ export function BookingForm({ services, areas, blocked, settings, initialService
         <p className="mt-2 text-slate">{"We'll call to confirm the time and the fixed price. The clean is not locked in until we speak with you."}</p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <Button type="button" variant="outline" onClick={() => navigator.clipboard.writeText(reference)}>Copy reference</Button>
-          <a className="inline-flex min-h-12 items-center justify-center rounded-full bg-whatsapp px-6 font-semibold text-white" href={waLink(settings.phoneTel, `Hi Spotless NT, my booking reference is ${reference}.`)}>WhatsApp</a>
+          <a className="inline-flex min-h-12 items-center justify-center rounded-full bg-whatsapp px-6 font-semibold text-white" href={waLink(settings.phoneTel, `Hi Territory Spotless, my booking reference is ${reference}.`)}>WhatsApp</a>
           <a className="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-brand px-6 font-semibold text-brand" href={`tel:${settings.phoneTel}`}>Call</a>
         </div>
       </div>

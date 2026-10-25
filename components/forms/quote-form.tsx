@@ -60,7 +60,7 @@ export function QuoteForm({ services, areas, settings, initialService = "" }: { 
         <p className="mt-2 text-slate">{"We'll call to confirm a fixed price. This is not a confirmed booking yet."}</p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
           <Button type="button" variant="outline" onClick={() => navigator.clipboard.writeText(result.reference)}>Copy reference</Button>
-          <a className="inline-flex min-h-12 items-center justify-center rounded-full bg-whatsapp px-6 font-semibold text-white" href={waLink(settings.phoneTel, `Hi Spotless NT, my quote reference is ${result.reference}.`)}>WhatsApp</a>
+          <a className="inline-flex min-h-12 items-center justify-center rounded-full bg-whatsapp px-6 font-semibold text-white" href={waLink(settings.phoneTel, `Hi Territory Spotless, my quote reference is ${result.reference}.`)}>WhatsApp</a>
           <a className="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-brand px-6 font-semibold text-brand" href={`tel:${settings.phoneTel}`}>Call</a>
         </div>
       </div>

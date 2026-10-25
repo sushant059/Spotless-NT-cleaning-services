@@ -4,13 +4,13 @@ import { STOCK } from "@/lib/stock";
 
 export const metadata: Metadata = {
   title: "Terms",
-  description: "Terms for quotes and bookings with Spotless NT Cleaning Services in the Northern Territory.",
+  description: "Terms for quotes and bookings with Territory Spotless Cleaning Services in the Northern Territory.",
 };
 
 export default function TermsPage() {
   return (
     <>
-      <PageHero image={STOCK.living} eyebrow="Terms" title="Terms of service" lede="These terms cover quote requests and cleaning booked with Spotless NT. They sit alongside the Australian Consumer Law." />
+      <PageHero image={STOCK.living} eyebrow="Terms" title="Terms of service" lede="These terms cover quote requests and cleaning booked with Territory Spotless. They sit alongside the Australian Consumer Law." />
       <section className="section pt-12">
         <div className="container-x card max-w-3xl space-y-4 p-6 text-slate md:p-10">
           <p>A form, chat or phone enquiry is a request. It becomes a booking only when we confirm the price and the time with you. Reference codes help us find your request. They are not a tax invoice.</p>

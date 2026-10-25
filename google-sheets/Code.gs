@@ -1,5 +1,5 @@
 /**
- * Spotless NT → Google Sheets sync.
+ * Territory Spotless → Google Sheets sync.
  *
  * Paste this whole file into Extensions → Apps Script in your Google Sheet,
  * set SECRET below to the same value as GOOGLE_SHEETS_SECRET in Vercel,
@@ -32,7 +32,7 @@ function doPost(e) {
 
 /** Visit the web app URL in a browser to check it is running. */
 function doGet() {
-  return reply({ ok: true, message: 'Spotless NT sheet sync is running.' });
+  return reply({ ok: true, message: 'Territory Spotless sheet sync is running.' });
 }
 
 function getSheet(name) {

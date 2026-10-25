@@ -9,7 +9,7 @@ import { STOCK } from "@/lib/stock";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Call, WhatsApp or email Spotless NT Cleaning Services in Darwin.",
+  description: "Call, WhatsApp or email Territory Spotless Cleaning Services in Darwin.",
 };
 
 export default async function ContactPage() {

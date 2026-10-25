@@ -81,7 +81,7 @@ function LeadCard({ lead }: { lead: Lead }) {
       {lead.promoMessage && <p className="mt-2 text-sm text-brand">{lead.promoMessage}</p>}
       <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold">
         {lead.phone && <a className="text-brand" href={`tel:${lead.phone}`}>Call</a>}
-        {lead.phone && <a className="text-brand" href={waLink(lead.phone, `Hi ${lead.name}, it's Spotless NT about ${lead.reference}.`)}>WhatsApp</a>}
+        {lead.phone && <a className="text-brand" href={waLink(lead.phone, `Hi ${lead.name}, it's Territory Spotless about ${lead.reference}.`)}>WhatsApp</a>}
         {lead.email && <a className="text-brand" href={`mailto:${lead.email}`}>Email</a>}
       </div>
       <label className="mt-3 block text-sm font-semibold" htmlFor={`notes-${lead.id}`}>Internal notes</label>
@@ -123,7 +123,7 @@ function BookingCard({ booking }: { booking: Booking }) {
       {booking.promoCode && <p className="mt-2 inline-flex rounded-full bg-leaf-soft px-3 py-1 text-sm font-semibold text-leaf-dark">Promo {booking.promoCode}: {booking.promoMessage}</p>}
       <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold">
         <a className="text-brand" href={`tel:${booking.phone}`}>Call</a>
-        <a className="text-brand" href={waLink(booking.phone, `Hi ${booking.name}, it's Spotless NT about ${booking.reference}.`)}>WhatsApp</a>
+        <a className="text-brand" href={waLink(booking.phone, `Hi ${booking.name}, it's Territory Spotless about ${booking.reference}.`)}>WhatsApp</a>
       </div>
       <label className="mt-3 block text-sm font-semibold" htmlFor={`bnotes-${booking.id}`}>Internal notes</label>
       <textarea id={`bnotes-${booking.id}`} className="mt-1 min-h-20 w-full rounded-input border border-line px-3 py-2" value={notes} onChange={(event) => setNotes(event.target.value)} onBlur={() => start(async () => { await updateBookingAction(booking.id, { internalNotes: notes }); router.refresh(); })} />

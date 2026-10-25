@@ -9,7 +9,7 @@ import { STOCK } from "@/lib/stock";
 
 export const metadata: Metadata = {
   title: "Offers & specials",
-  description: "Current cleaning specials and promotions from Spotless NT in Darwin.",
+  description: "Current cleaning specials and promotions from Territory Spotless in Darwin.",
 };
 
 export default async function OffersPage() {

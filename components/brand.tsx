@@ -4,16 +4,13 @@ import { cn } from "@/lib/utils";
 
 export function Logo({ tone = "dark", className, compact = false }: { tone?: "dark" | "light"; className?: string; compact?: boolean }) {
   return (
-    <Link href="/" className={cn("group inline-flex items-center gap-2.5", className)} aria-label="Spotless NT Cleaning Services home">
-      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white shadow-card ring-1 ring-line transition group-hover:rotate-[-4deg]">
-        <Image src="/spotless-nt-mark.png" alt="" width={44} height={44} priority />
-      </span>
+    <Link href="/" className={cn("group inline-flex items-center gap-2.5", className)} aria-label="Territory Spotless Cleaning Services home">
+      <Image src={tone === "dark" ? "/territory-spotless-mark.svg" : "/territory-spotless-mark-white.svg"} alt="" width={48} height={48} priority className="h-12 w-12 shrink-0 transition group-hover:rotate-[-4deg]" />
       {!compact && (
         <span className="whitespace-nowrap leading-none">
-          <span className={cn("block font-display text-[22px] font-extrabold tracking-tight", tone === "dark" ? "text-navy" : "text-white")}>
-            Spotless <span className={tone === "dark" ? "text-leaf" : "text-leaf"}>NT</span>
-          </span>
-          <span className={cn("mt-1 block text-[10px] font-bold uppercase tracking-[0.24em]", tone === "dark" ? "text-brand" : "text-sky-soft")}>Cleaning Services</span>
+          <span className={cn("block text-[9.5px] font-extrabold uppercase tracking-[0.32em]", tone === "dark" ? "text-leaf" : "text-[#5ED184]")}>Territory</span>
+          <span className={cn("mt-0.5 block font-display text-[23px] font-extrabold tracking-tight", tone === "dark" ? "text-navy" : "text-white")}>Spotless</span>
+          <span className={cn("mt-1 block text-[8.5px] font-bold uppercase tracking-[0.3em]", tone === "dark" ? "text-brand" : "text-sky-soft")}>Cleaning Services</span>
         </span>
       )}
     </Link>

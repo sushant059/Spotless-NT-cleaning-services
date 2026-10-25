@@ -56,7 +56,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
           <section aria-labelledby="video-heading">
             <h2 id="video-heading" className="sr-only">Video</h2>
             <div className="overflow-hidden rounded-card shadow-soft ring-1 ring-line">
-              <VideoPlayer url={service.videoUrl} poster={service.image} title={`${service.title} by Spotless NT`} scene={service.slug} />
+              <VideoPlayer url={service.videoUrl} poster={service.image} title={`${service.title} by Territory Spotless`} scene={service.slug} />
             </div>
           </section>
 
@@ -151,7 +151,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
             <div className="grid gap-3 p-6 pt-2">
               <Link href={`/free-quote?service=${service.slug}`} className="inline-flex min-h-12 items-center justify-center rounded-full bg-leaf-dark font-bold text-white hover:bg-[#1d6a19]">Get a free quote</Link>
               <button type="button" data-open-chat className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand-light font-bold text-brand hover:bg-sky-soft"><MessageSquareText className="h-4 w-4" aria-hidden /> Book in chat</button>
-              <a href={whatsappHref(s, `Hi Spotless NT, I'd like a quote for ${service.title.toLowerCase()}.`)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-line font-bold text-navy hover:border-whatsapp">WhatsApp us</a>
+              <a href={whatsappHref(s, `Hi Territory Spotless, I'd like a quote for ${service.title.toLowerCase()}.`)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-line font-bold text-navy hover:border-whatsapp">WhatsApp us</a>
               <a href={`tel:${s.phoneTel}`} className="mt-1 flex items-center justify-center gap-2 text-sm font-semibold text-slate hover:text-navy"><Phone className="h-4 w-4" aria-hidden /> {s.phoneDisplay}</a>
             </div>
           </div>

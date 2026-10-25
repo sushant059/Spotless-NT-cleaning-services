@@ -39,7 +39,7 @@ export function MessagesComposer({ customers, offers, promos, campaigns, siteUrl
   const [pending, start] = useTransition();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [subject, setSubject] = useState(initial?.subject ?? "");
-  const [message, setMessage] = useState(initial?.message ?? "Hi {name}, it's Spotless NT! ");
+  const [message, setMessage] = useState(initial?.message ?? "Hi {name}, it's Territory Spotless! ");
   const [channel, setChannel] = useState<Channel>("email");
   const [selected, setSelected] = useState<string[]>([]);
   const [opened, setOpened] = useState<string[]>([]);
@@ -62,7 +62,7 @@ export function MessagesComposer({ customers, offers, promos, campaigns, siteUrl
     if (!offer) return;
     setTitle(offer.title);
     setSubject(offer.title);
-    setMessage(`Hi {name}, it's Spotless NT! ${offer.title}. ${offer.description} Book or get a quote: ${siteUrl}${offer.href || "/free-quote"}`);
+    setMessage(`Hi {name}, it's Territory Spotless! ${offer.title}. ${offer.description} Book or get a quote: ${siteUrl}${offer.href || "/free-quote"}`);
   }
 
   function addPromo(code: string) {

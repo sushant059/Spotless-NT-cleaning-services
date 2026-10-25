@@ -23,7 +23,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
     telephone: db.settings.phoneTel,
     email: db.settings.email,
     url: siteUrl(),
-    image: `${siteUrl()}/spotless-nt-mark.png`,
+    image: `${siteUrl()}/territory-spotless-mark.png`,
     areaServed: "Darwin, Northern Territory",
     ...(sameAs.length ? { sameAs } : {}),
     ...(approved.length >= 3

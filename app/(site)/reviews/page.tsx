@@ -7,7 +7,7 @@ import { STOCK } from "@/lib/stock";
 
 export const metadata: Metadata = {
   title: "Customer reviews",
-  description: "Read reviews from Spotless NT customers in Darwin and Palmerston, or leave your own.",
+  description: "Read reviews from Territory Spotless customers in Darwin and Palmerston, or leave your own.",
 };
 
 export default async function ReviewsPage() {

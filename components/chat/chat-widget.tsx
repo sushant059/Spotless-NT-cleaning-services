@@ -34,7 +34,7 @@ type Ask =
 
 const EMPTY: Draft = { services: [], servicesDone: false, details: {}, suburb: "", name: "", phone: "", time: "", promo: "", promoAsked: false, reference: "", promoMessage: "" };
 const STORAGE = "snt-chat-v2";
-const GREETING = "Hi there! 👋 I’m the Spotless NT booking assistant. I’ll ask a few quick questions and our team will call you back with a fixed price.";
+const GREETING = "Hi there! 👋 I’m the Territory Spotless booking assistant. I’ll ask a few quick questions and our team will call you back with a fixed price.";
 
 /** Works out the next question from what has been answered so far. */
 function nextAsk(draft: Draft): Ask {
@@ -267,20 +267,20 @@ export function ChatWidget({ settings, services, open, onOpenChange }: { setting
 
   if (!open) return null;
   const summary = summariseJob(draft.services, draft.details);
-  const whatsappText = `Hi Spotless NT, I'd like a free quote.\nReference: ${draft.reference}\n${summary.join("\n")}\nSuburb: ${draft.suburb}\nName: ${draft.name}`;
+  const whatsappText = `Hi Territory Spotless, I'd like a free quote.\nReference: ${draft.reference}\n${summary.join("\n")}\nSuburb: ${draft.suburb}\nName: ${draft.name}`;
   const answered = [draft.servicesDone, draft.suburb, draft.name, draft.phone, draft.time, draft.promoAsked, draft.reference].filter(Boolean).length;
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-mist md:inset-auto md:bottom-6 md:right-6 md:h-[min(720px,calc(100vh-3rem))] md:w-[420px] md:overflow-hidden md:rounded-[28px] md:shadow-soft md:ring-1 md:ring-line" role="dialog" aria-label="Spotless NT booking assistant">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-mist md:inset-auto md:bottom-6 md:right-6 md:h-[min(720px,calc(100vh-3rem))] md:w-[420px] md:overflow-hidden md:rounded-[28px] md:shadow-soft md:ring-1 md:ring-line" role="dialog" aria-label="Territory Spotless booking assistant">
       <header className="relative overflow-hidden bg-hero px-5 pb-4 pt-5 text-white">
         <div className="flex items-center gap-3">
           <span className="relative grid h-11 w-11 place-items-center rounded-full bg-white">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/spotless-nt-mark.png" alt="" className="h-9 w-9" />
+            <img src="/territory-spotless-mark.png" alt="" className="h-9 w-9" />
             <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-navy bg-leaf" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="font-display text-lg font-bold leading-tight">Spotless NT</p>
+            <p className="font-display text-lg font-bold leading-tight">Territory Spotless</p>
             <p className="text-sm text-white/70">Booking assistant · replies instantly</p>
           </div>
           <button type="button" className="grid h-10 w-10 place-items-center rounded-full hover:bg-white/10" aria-label="Start over" title="Start over" onClick={restart}><RotateCcw className="h-4 w-4" aria-hidden /></button>

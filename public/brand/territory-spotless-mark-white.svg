@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Territory Spotless Cleaning Services">
+  <defs>
+    <linearGradient id="ts-drop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5AA6E6"/>
+      <stop offset="1" stop-color="#1F63B4"/>
+    </linearGradient>
+    <linearGradient id="ts-swoosh" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#217A3A"/>
+      <stop offset="1" stop-color="#3DB863"/>
+    </linearGradient>
+  </defs>
+  <!-- blue swoosh, upper left -->
+  <path d="M74 52C38 72 20 108 26 146" fill="none" stroke="#8CC4F2" stroke-width="11" stroke-linecap="round"/>
+  <!-- green swoosh, bottom -->
+  <path d="M30 166C52 214 140 228 204 178" fill="none" stroke="url(#ts-swoosh)" stroke-width="15" stroke-linecap="round"/>
+  <!-- roof and chimney -->
+  <rect x="150" y="44" width="18" height="52" rx="2" fill="#FFFFFF"/>
+  <path d="M52 124 120 60l68 64" fill="none" stroke="#FFFFFF" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- window -->
+  <g fill="#FFFFFF">
+    <rect x="109" y="90" width="9" height="9" rx="1.5"/><rect x="121" y="90" width="9" height="9" rx="1.5"/>
+    <rect x="109" y="102" width="9" height="9" rx="1.5"/><rect x="121" y="102" width="9" height="9" rx="1.5"/>
+  </g>
+  <!-- water drop -->
+  <path d="M120 122c13 17 25 31 25 47a25 25 0 0 1-50 0c0-16 12-30 25-47Z" fill="url(#ts-drop)"/>
+  <path d="M108 168a13 13 0 0 0 9 13" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".85"/>
+  <!-- sparkles -->
+  <path d="M202 60c2 12 7 17 19 19-12 2-17 7-19 19-2-12-7-17-19-19 12-2 17-7 19-19Z" fill="#5AA6E6"/>
+  <path d="M214 104c1 7 4 10 11 11-7 1-10 4-11 11-1-7-4-10-11-11 7-1 10-4 11-11Z" fill="#8CC4F2"/>
+</svg>

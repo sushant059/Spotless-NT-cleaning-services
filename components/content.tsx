@@ -258,7 +258,7 @@ export function TeamVisual({ photo, className }: { photo: string; className?: st
   return (
     <div className={cn("relative grid grid-cols-5 grid-rows-6 gap-3 sm:gap-4", className)}>
       <div className="relative col-span-3 row-span-6 min-h-[340px] overflow-hidden rounded-card shadow-soft sm:min-h-[460px]">
-        <Photo src={photo} stock={STOCK.team} alt="A Spotless NT style cleaning crew" fill sizes="(max-width: 1024px) 60vw, 30vw" />
+        <Photo src={photo} stock={STOCK.team} alt="A Territory Spotless style cleaning crew" fill sizes="(max-width: 1024px) 60vw, 30vw" />
       </div>
       <div className="relative col-span-2 row-span-3 overflow-hidden rounded-card shadow-card">
         <Photo stock={STOCK.carpet} alt="Carpet cleaning in progress" fill sizes="(max-width: 1024px) 40vw, 20vw" />

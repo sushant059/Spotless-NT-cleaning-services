@@ -281,11 +281,11 @@ export function seedDatabase(): Database {
   return {
     version: 1,
     settings: {
-      businessName: "Spotless NT Cleaning Services",
-      shortName: "Spotless NT",
+      businessName: "Territory Spotless Cleaning Services",
+      shortName: "Territory Spotless",
       phoneDisplay: "0401 647 545",
       phoneTel: "+61401647545",
-      whatsappUrl: "https://wa.me/61401647545?text=Hi%20Spotless%20NT%2C%20I%27d%20like%20a%20free%20quote.",
+      whatsappUrl: "https://wa.me/61401647545?text=Hi%20Territory%20Spotless%2C%20I%27d%20like%20a%20free%20quote.",
       email: "regmisushant94@gmail.com",
       notificationEmail: "regmisushant94@gmail.com",
       address: "",
@@ -307,7 +307,7 @@ export function seedDatabase(): Database {
         { day: "Saturday", hours: "8:00am – 2:00pm" },
         { day: "Sunday", hours: "Closed" },
       ],
-      seoTitle: "Spotless NT Cleaning Services | Darwin carpet, couch and mattress cleaning",
+      seoTitle: "Territory Spotless Cleaning Services | Darwin carpet, couch and mattress cleaning",
       seoDescription:
         "Carpet, couch, mattress, rug and end-of-lease cleaning for Darwin and surrounding Northern Territory suburbs. Fixed quotes before we start. Call 0401 647 545.",
       heroHeadline: "Fresh, healthy homes across the Top End",
@@ -326,7 +326,7 @@ export function seedDatabase(): Database {
         bsb: "",
         accountNumber: "",
         payId: "",
-        footer: "Thanks for choosing Spotless NT Cleaning Services.",
+        footer: "Thanks for choosing Territory Spotless Cleaning Services.",
       },
     },
     services,

@@ -29,7 +29,7 @@ export default function LoginPage() {
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/spotless-nt-icon.svg" alt="" className="h-16 w-16" />
+        <img src="/territory-spotless-mark.svg" alt="" className="h-16 w-16" />
         <h1 className="mt-4 text-3xl font-bold">Owner sign in</h1>
         <p className="mt-2 text-sm text-slate">Only the business email can open the admin.</p>
         <div className="mt-6">

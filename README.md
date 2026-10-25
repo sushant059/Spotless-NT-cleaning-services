@@ -1,6 +1,6 @@
-# Spotless NT Cleaning Services
+# Territory Spotless Cleaning Services
 
-Website and owner admin panel for Spotless NT, a carpet, upholstery, mattress and bond cleaning business in Darwin and the surrounding Northern Territory.
+Website and owner admin panel for Territory Spotless, a carpet, upholstery, mattress and bond cleaning business in Darwin and the surrounding Northern Territory.
 
 ## What's included
 

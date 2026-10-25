@@ -62,7 +62,7 @@ function promoInvite(promo: Promo, siteUrl: string) {
   return {
     title: `Promo code ${promo.code}`,
     subject: `${promoDiscount(promo)} your next clean – code ${promo.code}`,
-    message: `Hi {name}, it's Spotless NT! Here's ${promoDiscount(promo)} your next clean with code ${promo.code}${until}. Book or get a quote: ${siteUrl}/booking`,
+    message: `Hi {name}, it's Territory Spotless! Here's ${promoDiscount(promo)} your next clean with code ${promo.code}${until}. Book or get a quote: ${siteUrl}/booking`,
   };
 }
 

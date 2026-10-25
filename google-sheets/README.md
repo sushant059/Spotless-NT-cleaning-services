@@ -4,7 +4,7 @@ The website copies **Customers**, **Jobs**, **Leads** and **Bookings** into a Go
 
 ## One-time setup (about 5 minutes)
 
-1. Create a new Google Sheet (sheets.new), for example "Spotless NT – Customers & Jobs".
+1. Create a new Google Sheet (sheets.new), for example "Territory Spotless – Customers & Jobs".
 2. In the sheet: **Extensions → Apps Script**.
 3. Delete the sample code, paste in everything from [`Code.gs`](Code.gs), and replace `PASTE-THE-SECRET-HERE` with the `GOOGLE_SHEETS_SECRET` value from Vercel (Project → Settings → Environment Variables).
 4. Click **Save** (disk icon).

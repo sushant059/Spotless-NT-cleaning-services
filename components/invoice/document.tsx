@@ -30,7 +30,7 @@ export function InvoiceDocument({ invoice, customer, job, settings, className }:
         {/* Seller and title */}
         <header className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
-            <Image src="/spotless-nt-mark.png" alt="" width={56} height={56} className="h-14 w-14 shrink-0" />
+            <Image src="/territory-spotless-mark.png" alt="" width={56} height={56} className="h-14 w-14 shrink-0" />
             <div className="text-sm leading-relaxed">
               <p className="text-xl font-extrabold leading-tight text-navy">{settings.businessName}</p>
               {settings.abn && <p className="font-semibold text-ink">ABN {settings.abn}</p>}

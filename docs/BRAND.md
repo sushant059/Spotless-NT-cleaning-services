@@ -1,4 +1,4 @@
-# Spotless NT brand guidelines
+# Territory Spotless brand guidelines
 
 Short rules so the website, uniforms, vehicle, socials and print all look like one business.
 

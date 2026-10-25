@@ -176,7 +176,7 @@ function JobActions({ row }: { row: JobRow }) {
   return (
     <>
       {phone && <IconLink href={`tel:${phone}`} label="Call customer"><Phone className="h-4 w-4" aria-hidden /></IconLink>}
-      {phone && <IconLink href={waLink(phone, `Hi ${row.customer?.name}, it's Spotless NT about your clean (${row.job.reference}).`)} label="WhatsApp customer" external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
+      {phone && <IconLink href={waLink(phone, `Hi ${row.customer?.name}, it's Territory Spotless about your clean (${row.job.reference}).`)} label="WhatsApp customer" external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
       {row.invoice ? (
         <Link href={`/admin/invoices/${row.invoice.id}`} className="inline-flex min-h-9 items-center gap-1 whitespace-nowrap rounded-full bg-leaf-soft px-3 text-xs font-bold text-leaf-dark"><Receipt className="h-3.5 w-3.5" aria-hidden /> {row.invoice.number}</Link>
       ) : (

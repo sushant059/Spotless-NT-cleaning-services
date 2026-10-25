@@ -19,7 +19,7 @@ export const viewport: Viewport = { themeColor: "#0F2D4F" };
 
 export async function generateMetadata(): Promise<Metadata> {
   const db = await getDb();
-  const image = db.settings.ogImage || "/spotless-nt-mark.png";
+  const image = db.settings.ogImage || "/territory-spotless-mark.png";
   return {
     metadataBase: new URL(siteUrl()),
     title: { default: db.settings.seoTitle, template: `%s | ${db.settings.shortName}` },
@@ -34,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
       images: [{ url: image, alt: db.settings.businessName }],
     },
     twitter: { card: "summary_large_image", title: db.settings.seoTitle, description: db.settings.seoDescription, images: [image] },
-    icons: { icon: "/spotless-nt-icon.svg", apple: "/spotless-nt-mark.png" },
+    icons: { icon: "/territory-spotless-mark.svg", apple: "/territory-spotless-app-icon.png" },
   };
 }
 

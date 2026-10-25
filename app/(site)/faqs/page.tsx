@@ -7,7 +7,7 @@ import { STOCK } from "@/lib/stock";
 
 export const metadata: Metadata = {
   title: "FAQs",
-  description: "Drying times, pets, stains, bond paperwork, booking and payment for Spotless NT cleaning in Darwin.",
+  description: "Drying times, pets, stains, bond paperwork, booking and payment for Territory Spotless cleaning in Darwin.",
 };
 
 export default async function FaqsPage() {

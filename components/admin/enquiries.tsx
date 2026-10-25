@@ -214,7 +214,7 @@ function RowActions({ row, wide = false }: { row: EnquiryRow; wide?: boolean }) 
         <BookJobButton row={row} wide={wide} />
       )}
       {row.phone && <IconLink href={`tel:${row.phone}`} label={`Call ${row.name}`}><Phone className="h-4 w-4" aria-hidden /></IconLink>}
-      {row.phone && <IconLink href={waLink(row.phone, `Hi ${row.name}, it's Spotless NT about ${row.reference}.`)} label={`WhatsApp ${row.name}`} external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
+      {row.phone && <IconLink href={waLink(row.phone, `Hi ${row.name}, it's Territory Spotless about ${row.reference}.`)} label={`WhatsApp ${row.name}`} external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
       {row.email && wide && <IconLink href={`mailto:${row.email}`} label={`Email ${row.name}`}><Mail className="h-4 w-4" aria-hidden /></IconLink>}
     </>
   );

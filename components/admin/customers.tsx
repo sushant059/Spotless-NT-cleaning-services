@@ -115,7 +115,7 @@ export function CustomersBoard({ customers, jobs, services = [], startAdding = f
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1.5">
                       {customer.phone && <IconLink href={`tel:${customer.phone}`} label={`Call ${customer.name}`}><Phone className="h-4 w-4" aria-hidden /></IconLink>}
-                      {customer.phone && <IconLink href={waLink(customer.phone, `Hi ${customer.name}, it's Spotless NT.`)} label={`WhatsApp ${customer.name}`} external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
+                      {customer.phone && <IconLink href={waLink(customer.phone, `Hi ${customer.name}, it's Territory Spotless.`)} label={`WhatsApp ${customer.name}`} external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
                       <AddJobButton customers={customers} services={services} customerId={customer.id} size="sm" variant="outline" label="Add job" />
                       <Link href={`/admin/customers/${customer.id}`} className="inline-flex min-h-10 items-center rounded-full bg-navy px-4 text-sm font-semibold text-white hover:bg-navy-deep">Open</Link>
                     </div>
@@ -140,7 +140,7 @@ export function CustomersBoard({ customers, jobs, services = [], startAdding = f
             </Link>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {customer.phone && <IconLink href={`tel:${customer.phone}`} label={`Call ${customer.name}`}><Phone className="h-4 w-4" aria-hidden /></IconLink>}
-              {customer.phone && <IconLink href={waLink(customer.phone, `Hi ${customer.name}, it's Spotless NT.`)} label={`WhatsApp ${customer.name}`} external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
+              {customer.phone && <IconLink href={waLink(customer.phone, `Hi ${customer.name}, it's Territory Spotless.`)} label={`WhatsApp ${customer.name}`} external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
               <AddJobButton customers={customers} services={services} customerId={customer.id} size="sm" variant="outline" label="Add job" />
             </div>
           </li>
@@ -249,7 +249,7 @@ export function CustomerHeader({ customer }: { customer: Customer }) {
       {customer.notes && <p className="mt-3 whitespace-pre-wrap rounded-2xl bg-mist p-3 text-sm">{customer.notes}</p>}
       <div className="mt-4 flex flex-wrap gap-2 text-sm font-semibold">
         {customer.phone && <a className="inline-flex items-center gap-1.5 rounded-full bg-brand-light px-3 py-1.5 text-brand" href={`tel:${customer.phone}`}><Phone className="h-4 w-4" aria-hidden /> Call</a>}
-        {customer.phone && <a className="inline-flex items-center gap-1.5 rounded-full bg-[#E7F9EE] px-3 py-1.5 text-[#1DA851]" href={waLink(customer.phone, `Hi ${customer.name.split(" ")[0]}, it's Spotless NT.`)} target="_blank" rel="noopener noreferrer"><MessageCircle className="h-4 w-4" aria-hidden /> WhatsApp</a>}
+        {customer.phone && <a className="inline-flex items-center gap-1.5 rounded-full bg-[#E7F9EE] px-3 py-1.5 text-[#1DA851]" href={waLink(customer.phone, `Hi ${customer.name.split(" ")[0]}, it's Territory Spotless.`)} target="_blank" rel="noopener noreferrer"><MessageCircle className="h-4 w-4" aria-hidden /> WhatsApp</a>}
         {customer.phone && <a className="inline-flex items-center gap-1.5 rounded-full bg-mist px-3 py-1.5 text-navy" href={`sms:${customer.phone}`}>Text</a>}
         {customer.email && <a className="inline-flex items-center gap-1.5 rounded-full bg-mist px-3 py-1.5 text-navy" href={`mailto:${customer.email}`}>Email</a>}
       </div>

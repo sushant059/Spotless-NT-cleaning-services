@@ -32,7 +32,7 @@ export function ownerLeadEmail(settings: Settings, input: {
   extra: string;
 }) {
   const phoneLink = input.phone ? `tel:+${input.phone.replace(/\D/g, "").replace(/^0/, "61")}` : "";
-  const whatsapp = input.phone ? waLink(input.phone, `Hi ${input.name}, it's Spotless NT about ${input.reference}.`) : "";
+  const whatsapp = input.phone ? waLink(input.phone, `Hi ${input.name}, it's Territory Spotless about ${input.reference}.`) : "";
   const links = [
     phoneLink ? `<a href="${phoneLink}">Call ${escapeHtml(input.name)}</a>` : "",
     whatsapp ? `<a href="${whatsapp}">WhatsApp</a>` : "",
@@ -50,7 +50,7 @@ export function ownerLeadEmail(settings: Settings, input: {
     <p style="margin-top:16px">${links}</p>
   `);
   const text = [`New ${input.kind}`, `Reference: ${input.reference}`, `Name: ${input.name}`, `Phone: ${input.phone}`, `Email: ${input.email}`, `Suburb: ${input.suburb}`, input.summary, input.message, input.extra, phoneLink, whatsapp].filter(Boolean).join("\n");
-  return { subject: `${input.kind} ${input.reference} — ${input.name || "Spotless NT"}`, html, text };
+  return { subject: `${input.kind} ${input.reference} — ${input.name || "Territory Spotless"}`, html, text };
 }
 
 export function customerEmail(settings: Settings, input: { name: string; reference: string; kind: string }) {
@@ -80,7 +80,7 @@ export async function sendMailEach(messages: (Mail & { replyTo?: string })[]): P
   if (gmailEnabled()) {
     const nodemailer = await import("nodemailer");
     const transport = nodemailer.createTransport({ service: "gmail", auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD } });
-    const from = process.env.EMAIL_FROM || `Spotless NT Cleaning <${process.env.GMAIL_USER}>`;
+    const from = process.env.EMAIL_FROM || `Territory Spotless Cleaning <${process.env.GMAIL_USER}>`;
     for (const message of messages) {
       try {
         await transport.sendMail({ from, to: message.to, replyTo: message.replyTo, subject: message.subject, html: message.html, text: message.text });
@@ -94,7 +94,7 @@ export async function sendMailEach(messages: (Mail & { replyTo?: string })[]): P
   const key = process.env.RESEND_API_KEY;
   if (!key) return { sent: 0, failed: messages.map((message) => message.to), error: "Email isn't set up yet." };
   const resend = new Resend(key);
-  const from = process.env.EMAIL_FROM || "Spotless NT <onboarding@resend.dev>";
+  const from = process.env.EMAIL_FROM || "Territory Spotless <onboarding@resend.dev>";
   for (const message of messages) {
     const result = await resend.emails.send({ from, to: message.to, replyTo: message.replyTo, subject: message.subject, html: message.html, text: message.text }).catch((reason) => ({ error: { message: String(reason) } }));
     if (result.error) {

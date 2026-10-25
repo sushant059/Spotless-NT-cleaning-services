@@ -1,6 +1,6 @@
 import type { Config } from "tailwindcss";
 
-// Brand tokens, taken from the Spotless NT logo (roof navy, vacuum blue, swoosh green),
+// Brand tokens, taken from the Territory Spotless logo (roof navy, vacuum blue, swoosh green),
 // toned down for a calm, clean look. "sand" is a warm off-white for alternating sections.
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],

@@ -59,7 +59,7 @@ export function VideoShowcase({ services }: { services: Service[] }) {
         ))}
       </div>
       <div role="tabpanel" className="self-start overflow-hidden rounded-card bg-navy-deep shadow-soft ring-1 ring-white/10">
-        <VideoPlayer key={current.slug} url={current.videoUrl} poster={current.image} title={`${current.title} by Spotless NT`} scene={current.slug} />
+        <VideoPlayer key={current.slug} url={current.videoUrl} poster={current.image} title={`${current.title} by Territory Spotless`} scene={current.slug} />
         <div className="flex flex-wrap items-center justify-between gap-3 p-5">
           <div>
             <p className="font-display text-xl font-bold text-white">{current.title}</p>

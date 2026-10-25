@@ -46,7 +46,7 @@ export function whatsappHref(settings: Settings, text?: string) {
 
 export function SocialIcons({ settings, tone = "light", size = "md", className }: { settings: Settings; tone?: "light" | "dark" | "color"; size?: "sm" | "md"; className?: string }) {
   return (
-    <ul className={cn("flex flex-wrap items-center gap-2", className)} aria-label="Follow Spotless NT">
+    <ul className={cn("flex flex-wrap items-center gap-2", className)} aria-label="Follow Territory Spotless">
       {socialLinks(settings).map((item) => (
         <li key={item.key}>
           <a

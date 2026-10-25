@@ -75,7 +75,7 @@ export type InvoiceSettings = {
   accountNumber: string;
   /** Optional PayID (email, mobile or ABN) customers can pay to. */
   payId: string;
-  /** Printed at the bottom of every invoice, e.g. "Thanks for choosing Spotless NT". */
+  /** Printed at the bottom of every invoice, e.g. "Thanks for choosing Territory Spotless". */
   footer: string;
 };
 

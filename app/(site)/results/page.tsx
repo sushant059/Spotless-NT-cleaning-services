@@ -7,7 +7,7 @@ import { STOCK } from "@/lib/stock";
 
 export const metadata: Metadata = {
   title: "Before and after",
-  description: "Before and after results from Spotless NT carpet, couch, mattress, rug and bond cleaning in Darwin.",
+  description: "Before and after results from Territory Spotless carpet, couch, mattress, rug and bond cleaning in Darwin.",
 };
 
 export default async function ResultsPage() {
