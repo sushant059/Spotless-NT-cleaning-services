@@ -57,11 +57,11 @@ export function Header({ settings, services }: { settings: Settings; services: N
     <header className={cn("relative border-b bg-white/90 backdrop-blur-xl transition", scrolled ? "border-line shadow-[0_8px_30px_-18px_rgba(11,47,94,.35)]" : "border-transparent")}>
       <div className="container-x flex h-[76px] items-center gap-4">
         <Logo />
-        <nav className="ml-auto hidden items-center gap-0.5 xl:flex" aria-label="Primary">
+        <nav className="ml-auto hidden items-center gap-0 xl:flex" aria-label="Primary">
           <div className="relative" onMouseLeave={() => setMega(false)}>
             <button
               type="button"
-              className={cn("inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-[15px] font-semibold text-navy hover:bg-brand-light", (active("/services") || mega) && "bg-brand-light text-brand")}
+              className={cn("inline-flex items-center gap-1 whitespace-nowrap rounded-full px-3 py-2 text-[15px] font-semibold text-navy hover:bg-brand-light", (active("/services") || mega) && "bg-brand-light text-brand")}
               aria-expanded={mega}
               aria-controls="mega-menu"
               onClick={() => setMega((value) => !value)}
@@ -92,16 +92,16 @@ export function Header({ settings, services }: { settings: Settings; services: N
             )}
           </div>
           {NAV_LINKS.filter((link) => link.href !== "/services").map((link) => (
-            <Link key={link.href} href={link.href} aria-current={active(link.href) ? "page" : undefined} className={cn("rounded-full px-3.5 py-2 text-[15px] font-semibold text-navy hover:bg-brand-light", active(link.href) && "bg-brand-light text-brand")}>
+            <Link key={link.href} href={link.href} aria-current={active(link.href) ? "page" : undefined} className={cn("whitespace-nowrap rounded-full px-3 py-2 text-[15px] font-semibold text-navy hover:bg-brand-light", active(link.href) && "bg-brand-light text-brand")}>
               {link.label}
             </Link>
           ))}
         </nav>
-        <a href={`tel:${settings.phoneTel}`} className="ml-auto hidden items-center gap-2 rounded-full px-3 py-2 font-semibold text-navy hover:bg-brand-light md:inline-flex xl:ml-2">
+        <a href={`tel:${settings.phoneTel}`} aria-label={`Call ${settings.phoneDisplay}`} className="ml-auto hidden items-center gap-2 whitespace-nowrap rounded-full px-2 py-2 font-semibold text-navy hover:bg-brand-light md:inline-flex xl:ml-1">
           <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-light text-brand"><Phone className="h-4 w-4" aria-hidden /></span>
-          {settings.phoneDisplay}
+          <span className="xl:hidden 2xl:inline">{settings.phoneDisplay}</span>
         </a>
-        <Link href="/free-quote" className="ml-auto hidden min-h-11 items-center rounded-full bg-leaf-dark px-5 text-sm font-bold text-white shadow-[0_10px_24px_-10px_rgba(36,128,31,.8)] transition hover:bg-[#1d6a19] sm:inline-flex md:ml-0">
+        <Link href="/free-quote" className="ml-auto hidden min-h-11 items-center whitespace-nowrap rounded-full bg-leaf-dark px-5 text-sm font-bold text-white shadow-[0_10px_24px_-10px_rgba(36,128,31,.8)] transition hover:bg-[#1d6a19] sm:inline-flex md:ml-0">
           Free quote
         </Link>
         <button type="button" className="ml-auto grid h-12 w-12 place-items-center rounded-full bg-navy text-white sm:ml-0 xl:hidden" aria-expanded={open} aria-controls="mobile-menu" onClick={() => setOpen((value) => !value)}>

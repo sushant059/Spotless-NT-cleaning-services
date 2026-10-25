@@ -4,6 +4,7 @@ import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { addAdmin, listAdmins, removeAdmin, setAdminPassword, verifyAdmin } from "@/lib/admin-users";
 import { clearSession, devAdminPassword, getSession, setSession } from "@/lib/auth";
 import { getBotReply } from "@/lib/bot";
 import { SERVICE_CATEGORY_IDS, summariseJob, timeWindowLabel, validateDetails } from "@/lib/constants";
@@ -121,10 +122,14 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
   const db = await getDb();
-  if (!email || email !== db.settings.email.toLowerCase()) {
-    return { ok: false, error: "Those details don't match the owner account." };
+  if (!email) return { ok: false, error: "Enter your email and password." };
+  // Extra admins added in Settings sign in with their own password.
+  if (email !== db.settings.email.toLowerCase()) {
+    if (!(await verifyAdmin(email, password))) return { ok: false, error: "Those details don't match an admin account." };
+    await setSession(email);
+    return { ok: true };
   }
-  // ADMIN_PASSWORD always works when set; otherwise use the Supabase Auth user for this email.
+  // Owner: ADMIN_PASSWORD always works when set; otherwise use the Supabase Auth user for this email.
   const envPassword = devAdminPassword();
   const anon = supabaseAnon();
   if (envPassword && safeEqual(password, envPassword)) {
@@ -139,6 +144,53 @@ export async function loginAction(formData: FormData): Promise<ActionResult> {
   }
   await setSession(email);
   return { ok: true };
+}
+
+const adminSchema = z.object({
+  name: z.string().trim().min(1, "Add a name").max(80),
+  email: z.string().trim().toLowerCase().email("Enter a valid email"),
+  password: z.string().min(8, "Password needs at least 8 characters").max(200),
+});
+
+/** Only the owner can add or remove other admins. */
+async function ownerGuard(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "Please sign in again." };
+  if (!session.owner) return { ok: false, error: "Only the owner account can manage admin logins." };
+  return { ok: true };
+}
+
+export async function addAdminAction(input: { name: string; email: string; password: string }): Promise<ActionResult> {
+  const auth = await ownerGuard();
+  if (!auth.ok) return auth;
+  const parsed = adminSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message || "Check the details." };
+  const db = await getDb();
+  if (parsed.data.email === db.settings.email.toLowerCase()) return { ok: false, error: "That's already the owner email." };
+  if ((await listAdmins()).some((admin) => admin.email === parsed.data.email)) return { ok: false, error: "That email is already an admin." };
+  try {
+    await addAdmin({ id: uid("adm"), ...parsed.data });
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Couldn't save the admin." };
+  }
+  revalidatePath("/admin/settings");
+  return { ok: true, message: `${parsed.data.name} can now sign in.` };
+}
+
+export async function resetAdminPasswordAction(id: string, password: string): Promise<ActionResult> {
+  const auth = await ownerGuard();
+  if (!auth.ok) return auth;
+  if (password.length < 8) return { ok: false, error: "Password needs at least 8 characters" };
+  await setAdminPassword(id, password);
+  return { ok: true, message: "Password changed." };
+}
+
+export async function removeAdminAction(id: string): Promise<ActionResult> {
+  const auth = await ownerGuard();
+  if (!auth.ok) return auth;
+  await removeAdmin(id);
+  revalidatePath("/admin/settings");
+  return { ok: true, message: "Admin removed. They can no longer sign in." };
 }
 
 export async function logoutAction() {

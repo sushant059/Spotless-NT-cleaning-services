@@ -96,7 +96,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
           <section>
             <SectionHeading eyebrow="Before & after" title="Results" />
             <div className="mt-8 grid gap-6 md:grid-cols-2">
-              {(results.length ? results : [{ id: "placeholder", scene: service.slug, serviceSlug: service.slug, caption: `${service.title}, illustrative example`, beforeImage: "", afterImage: "", illustrative: true, order: 0 }]).map((item) => (
+              {(results.length ? results : [{ id: "placeholder", scene: service.slug, serviceSlug: service.slug, caption: service.title, beforeImage: "", afterImage: "", illustrative: true, order: 0 }]).map((item) => (
                 <figure key={item.id}>
                   <BeforeAfter scene={item.scene || service.slug} beforeSrc={item.beforeImage} afterSrc={item.afterImage} beforeAlt={`Before: ${item.caption}`} afterAlt={`After: ${item.caption}`} />
                   <figcaption className="mt-2 text-sm font-semibold text-navy">{item.caption}</figcaption>
@@ -145,7 +145,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
               <p className="mt-1 font-display text-2xl font-extrabold">{service.title}</p>
             </div>
             <dl className="divide-y divide-line px-6">
-              <div className="flex items-center justify-between gap-3 py-4"><dt className="flex items-center gap-2 text-slate"><Tag className="h-4 w-4" aria-hidden /> Price</dt><dd className="font-bold text-navy">{filled(service.priceFrom) ? `From ${service.priceFrom}` : "Free fixed quote"}</dd></div>
+              <div className="flex items-center justify-between gap-3 py-4"><dt className="flex items-center gap-2 text-slate"><Tag className="h-4 w-4" aria-hidden /> Price</dt><dd className="font-bold text-navy">Free fixed quote</dd></div>
               <div className="flex items-center justify-between gap-3 py-4"><dt className="flex items-center gap-2 text-slate"><Clock className="h-4 w-4" aria-hidden /> Time on site</dt><dd className="font-bold text-navy">{filled(service.duration) ? service.duration : "Confirmed with quote"}</dd></div>
             </dl>
             <div className="grid gap-3 p-6 pt-2">

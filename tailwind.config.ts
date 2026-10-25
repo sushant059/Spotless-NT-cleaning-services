@@ -37,6 +37,7 @@ const config: Config = {
       keyframes: {
         twinkle: { "0%,100%": { opacity: "1", transform: "scale(1) rotate(0deg)" }, "50%": { opacity: ".45", transform: "scale(.75) rotate(20deg)" } },
         floaty: { "0%,100%": { transform: "translateY(0)" }, "50%": { transform: "translateY(-10px)" } },
+        pop: { "0%": { opacity: "0", transform: "translateY(12px) scale(.92)" }, "100%": { opacity: "1", transform: "none" } },
         sweep: { "0%": { transform: "translateX(-10%)" }, "50%": { transform: "translateX(70%)" }, "100%": { transform: "translateX(-10%)" } },
         reveal: { "0%": { clipPath: "inset(0 100% 0 0)" }, "50%": { clipPath: "inset(0 15% 0 0)" }, "100%": { clipPath: "inset(0 100% 0 0)" } },
         marquee: { "0%": { transform: "translateX(0)" }, "100%": { transform: "translateX(-50%)" } },
@@ -46,6 +47,7 @@ const config: Config = {
       animation: {
         twinkle: "twinkle 2.8s ease-in-out infinite",
         floaty: "floaty 6s ease-in-out infinite",
+        pop: "pop .7s cubic-bezier(.22,1,.36,1) both",
         sweep: "sweep 7s ease-in-out infinite",
         reveal: "reveal 7s ease-in-out infinite",
         marquee: "marquee 40s linear infinite",

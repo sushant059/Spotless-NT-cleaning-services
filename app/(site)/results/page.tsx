@@ -14,7 +14,7 @@ export default async function ResultsPage() {
   const db = await getDb();
   return (
     <>
-      <PageHero image={STOCK.upholstery} eyebrow="Before & after" title="See the difference for yourself." lede="Drag each slider to compare. Filter by service to find a job like yours." crumbs={[{ href: "/results", label: "Before & after" }]} />
+      <PageHero image={STOCK.upholstery} eyebrow="Before & after" title="See the difference for yourself." lede="Real job photos from around Darwin. Filter by service to find a job like yours." crumbs={[{ href: "/results", label: "Before & after" }]} />
       <section className="section pt-12">
         <div className="container-x"><ResultsGallery results={byOrder(db.results)} services={byOrder(db.services)} /></div>
       </section>

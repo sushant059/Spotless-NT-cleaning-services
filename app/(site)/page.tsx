@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { ArrowRight, CalendarCheck, CheckCircle2, MessageSquareText, Phone, ShieldCheck, Star, ThumbsUp } from "lucide-react";
-import { BeforeAfter } from "@/components/before-after";
 import { CtaBand, FaqList, GoogleReviewButton, ReviewCard, SectionHeading, ServiceCard, Steps, TeamVisual } from "@/components/content";
 import { FadeIn } from "@/components/fade-in";
 import { SuburbChecker } from "@/components/home/interactive";
 import { BackgroundVideo, Photo } from "@/components/photo";
 import { OfferCard } from "@/components/offers";
-import { ServiceIcon } from "@/components/icons";
 import { whatsappHref } from "@/components/social";
 import { serviceStock, STOCK, STOCK_CLIPS } from "@/lib/stock";
 import { getDb } from "@/lib/store";
@@ -20,12 +18,9 @@ export default async function HomePage() {
   const s = db.settings;
   const offers = byOrder(db.offers).filter((offer) => isOfferLive(offer));
   const services = byOrder(db.services).filter((service) => service.visible);
-  const results = byOrder(db.results);
   const reviews = byOrder(db.reviews).filter((review) => review.status === "approved").slice(0, 3);
   const faqs = byOrder(db.faqs).slice(0, 5);
-  const [featured, ...moreResults] = results;
   const bond = services.find((service) => service.slug === BOND_SLUG);
-  const priced = services.filter((service) => filled(service.priceFrom));
   // Admin can set the hero to their own photo, or to a video file, which then plays instead of the stock clip.
   const heroIsPhoto = filled(s.heroImage) && !/\.(mp4|webm|mov)(\?|$)/i.test(s.heroImage);
 
@@ -57,29 +52,26 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Starting prices */}
-          {priced.length > 0 && (
-            <div className="rounded-[24px] bg-white p-5 text-ink shadow-soft sm:p-6">
-              <div className="flex items-baseline justify-between gap-3">
-                <p className="text-lg font-extrabold text-navy">Starting prices</p>
-                <Link href="/free-quote" className="text-sm font-semibold text-brand hover:underline">Exact quote</Link>
-              </div>
-              <ul className="mt-4 divide-y divide-line">
-                {priced.slice(0, 5).map((service, index) => (
-                  <li key={service.id}>
-                    <FadeIn from="right" delay={150 + index * 90}>
-                      <Link href={`/services/${service.slug}`} className="group flex items-center gap-3 py-3">
-                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-light text-brand transition group-hover:bg-brand group-hover:text-white"><ServiceIcon name={service.icon} className="h-5 w-5" /></span>
-                        <span className="min-w-0 flex-1 truncate font-semibold text-navy">{service.title}</span>
-                        <span className="shrink-0 text-right text-sm text-slate">from <b className="text-lg font-extrabold text-leaf-dark">{service.priceFrom}</b></span>
-                      </Link>
-                    </FadeIn>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-3 text-xs text-slate">Final price depends on size and condition. We confirm it before we start.</p>
+          {/* Photo collage with gentle motion */}
+          <div className="relative mx-auto hidden h-[480px] w-full max-w-[520px] lg:block" aria-hidden>
+            <div className="absolute right-0 top-0 h-[300px] w-[260px] animate-floaty overflow-hidden rounded-[28px] shadow-soft ring-4 ring-white/10">
+              <Photo stock={STOCK.carpet} fill sizes="260px" />
             </div>
-          )}
+            <div className="absolute left-0 top-24 h-[260px] w-[230px] animate-floaty overflow-hidden rounded-[28px] shadow-soft ring-4 ring-white/10 [animation-delay:-2s]">
+              <Photo stock={STOCK.sofa} fill sizes="230px" />
+            </div>
+            <div className="absolute bottom-0 right-10 h-[190px] w-[250px] animate-floaty overflow-hidden rounded-[28px] shadow-soft ring-4 ring-white/10 [animation-delay:-4s]">
+              <Photo stock={STOCK.mattress} fill sizes="250px" />
+            </div>
+            <div className="absolute left-6 top-4 flex animate-pop items-center gap-2.5 rounded-2xl bg-white px-4 py-3 text-ink shadow-lift [animation-delay:.5s]">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-leaf-soft text-leaf-dark"><ShieldCheck className="h-5 w-5" /></span>
+              <span className="text-sm font-bold leading-tight text-navy">Kid & pet safe<span className="block text-xs font-medium text-slate">products</span></span>
+            </div>
+            <div className="absolute bottom-12 left-2 flex animate-pop items-center gap-2.5 rounded-2xl bg-white px-4 py-3 text-ink shadow-lift [animation-delay:.9s]">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-light text-brand"><CalendarCheck className="h-5 w-5" /></span>
+              <span className="text-sm font-bold leading-tight text-navy">Fixed quote<span className="block text-xs font-medium text-slate">before we start</span></span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -97,7 +89,7 @@ export default async function HomePage() {
                     <span className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[14px] bg-mist"><Photo src={service.image} stock={serviceStock(service.slug)} fill sizes="72px" /></span>
                     <span className="min-w-0 flex-1">
                       <span className="block font-bold leading-snug text-navy">{service.title}</span>
-                      {filled(service.priceFrom) ? <span className="mt-0.5 block text-sm text-slate">from <b className="font-extrabold text-leaf-dark">{service.priceFrom}</b></span> : <span className="mt-0.5 block text-sm text-slate">Free quote</span>}
+                      <span className="mt-0.5 block line-clamp-1 text-sm text-slate">{service.summary}</span>
                     </span>
                     <ArrowRight className="h-5 w-5 shrink-0 text-brand" aria-hidden />
                   </Link>
@@ -122,17 +114,15 @@ export default async function HomePage() {
             <FadeIn from="left">
               <div className="relative aspect-[4/3] overflow-hidden rounded-card shadow-soft">
                 <Photo src={bond.image} stock={STOCK.bond} alt="An empty rental ready for inspection" fill sizes="(max-width: 1024px) 100vw, 50vw" />
-                {filled(bond.priceFrom) && (
-                  <div className="absolute bottom-4 left-4 rounded-2xl bg-white px-4 py-3 shadow-lift">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate">Starting from</p>
-                    <p className="text-3xl font-extrabold text-leaf-dark">{bond.priceFrom}</p>
-                  </div>
-                )}
+                <div className="absolute bottom-4 left-4 flex animate-floaty items-center gap-2.5 rounded-2xl bg-white px-4 py-3 shadow-lift">
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-leaf-soft text-leaf-dark"><CheckCircle2 className="h-5 w-5" aria-hidden /></span>
+                  <span className="text-sm font-bold leading-tight text-navy">Inspection ready<span className="block text-xs font-medium text-slate">receipt for your agent</span></span>
+                </div>
               </div>
             </FadeIn>
             <FadeIn from="right">
               <p className="eyebrow"><span className="h-0.5 w-5 rounded-full bg-current" aria-hidden /> Moving out?</p>
-              <h2 className="h-section mt-3">Bond cleaning{filled(bond.priceFrom) ? <> from <span className="text-leaf-dark">{bond.priceFrom}</span></> : null}</h2>
+              <h2 className="h-section mt-3">Bond cleaning, done right.</h2>
               <p className="lede">Inspection-ready carpets for your rental hand-back, with a receipt and a short job note you can pass to the property manager.</p>
               <ul className="mt-6 grid gap-3 sm:grid-cols-2">
                 {["Hot-water extraction, every room you book", "Lounge & mattress add-ons", "Receipt & job note for the agent", "Timed for your hand-back day"].map((item) => (
@@ -184,33 +174,6 @@ export default async function HomePage() {
           <div className="mt-10"><Steps /></div>
         </div>
       </section>
-
-      {/* Before and after */}
-      {featured && (
-        <section className="section">
-          <div className="container-x">
-            <SectionHeading eyebrow="Before & after" title="Drag the slider to see the difference." action={<Link href="/results" className="link-arrow">Full gallery <ArrowRight className="h-4 w-4" aria-hidden /></Link>} />
-            <div className="mt-10 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-              <FadeIn>
-                <figure>
-                  <BeforeAfter scene={featured.scene || featured.serviceSlug} beforeSrc={featured.beforeImage} afterSrc={featured.afterImage} beforeAlt={`Before: ${featured.caption}`} afterAlt={`After: ${featured.caption}`} className="aspect-[16/11]" />
-                  <figcaption className="mt-3 font-semibold text-navy">{featured.caption}</figcaption>
-                </figure>
-              </FadeIn>
-              <div className="hidden gap-6 sm:grid sm:grid-cols-2 lg:grid-cols-1">
-                {moreResults.slice(0, 2).map((item, index) => (
-                  <FadeIn key={item.id} delay={index * 120}>
-                    <figure>
-                      <BeforeAfter scene={item.scene || item.serviceSlug} beforeSrc={item.beforeImage} afterSrc={item.afterImage} beforeAlt={`Before: ${item.caption}`} afterAlt={`After: ${item.caption}`} />
-                      <figcaption className="mt-2 text-sm font-semibold text-navy">{item.caption}</figcaption>
-                    </figure>
-                  </FadeIn>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Offers */}
       {offers.length > 0 && (

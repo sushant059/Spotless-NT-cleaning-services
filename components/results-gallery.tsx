@@ -24,7 +24,7 @@ export function ResultsGallery({ results, services }: { results: ResultPair[]; s
             <BeforeAfter scene={item.scene || item.serviceSlug} beforeSrc={item.beforeImage} afterSrc={item.afterImage} beforeAlt={`Before: ${item.caption}`} afterAlt={`After: ${item.caption}`} />
             <figcaption className="mt-3 flex flex-wrap items-center gap-2">
               <span className="font-semibold text-navy">{item.caption}</span>
-              {item.illustrative && <span className="chip bg-mist text-xs text-slate">Illustrative example</span>}
+              {!(item.beforeImage && item.afterImage) && <span className="chip bg-mist text-xs text-slate">Job photos coming soon</span>}
             </figcaption>
           </figure>
         ))}
