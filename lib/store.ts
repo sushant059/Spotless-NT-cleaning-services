@@ -87,14 +87,15 @@ function categoryFor(slug: string, icon: IconName): ServiceCategory {
   return seeded?.category ?? ICON_CATEGORY[icon] ?? "specialty-and-urgent";
 }
 
-const LEGACY_EMAIL = "regmisusanth94@gmail.com";
+// Old personal addresses: the business now uses its own domain mailbox for everything.
+const LEGACY_EMAILS = new Set(["regmisusanth94@gmail.com", "regmisushant94@gmail.com"]);
 
 // Fills fields added after a database was first created, so older data keeps working.
 export function normalizeDb(db: Database): Database {
   const fresh = seedDatabase();
   db.settings = { ...fresh.settings, ...db.settings };
-  if (db.settings.email === LEGACY_EMAIL) db.settings.email = fresh.settings.email;
-  if (db.settings.notificationEmail === LEGACY_EMAIL) db.settings.notificationEmail = fresh.settings.notificationEmail;
+  if (LEGACY_EMAILS.has(db.settings.email)) db.settings.email = fresh.settings.email;
+  if (LEGACY_EMAILS.has(db.settings.notificationEmail)) db.settings.notificationEmail = fresh.settings.notificationEmail;
   db.services = db.services.map((service) => ({
     ...service,
     category: service.category || categoryFor(service.slug, service.icon),

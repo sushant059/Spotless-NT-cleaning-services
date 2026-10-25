@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { ArrowUpRight, MessageCircle, Phone, Receipt, Search } from "lucide-react";
-import { CategoryBadges, FilterChips, IconLink } from "@/components/admin/kit";
+import { CategoryBadges, DeleteButton, FilterChips, IconLink } from "@/components/admin/kit";
 import { Input } from "@/components/ui/fields";
 import { useToast } from "@/components/ui/toaster";
-import { saveJobAction } from "@/lib/actions";
+import { deleteJobAction, saveJobAction } from "@/lib/actions";
 import { JOB_STATUSES, timeWindowLabel } from "@/lib/constants";
 import type { Customer, Job, JobStatus, ServiceCategory } from "@/lib/types";
 import { cn, formatDisplayDate, waLink } from "@/lib/utils";
@@ -183,6 +183,7 @@ function JobActions({ row }: { row: JobRow }) {
         <Link href={`/admin/invoices/new?job=${row.job.id}`} className="inline-flex min-h-9 items-center gap-1 whitespace-nowrap rounded-full bg-mist px-3 text-xs font-bold text-navy hover:bg-brand-light"><Receipt className="h-3.5 w-3.5" aria-hidden /> Invoice</Link>
       )}
       {row.customer && <Link href={`/admin/customers/${row.customer.id}`} className="inline-flex min-h-9 items-center gap-1 whitespace-nowrap rounded-full bg-navy px-3 text-xs font-bold text-white hover:bg-navy-deep">Open <ArrowUpRight className="h-3.5 w-3.5" aria-hidden /></Link>}
+      <DeleteButton label={`Delete job ${row.job.reference}`} title={`Delete job ${row.job.reference}?`} body="The job is removed from the admin, the database and the Google Sheet. The customer stays." action={() => deleteJobAction(row.job.id)} />
     </>
   );
 }

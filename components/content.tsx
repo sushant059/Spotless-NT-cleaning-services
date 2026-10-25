@@ -8,7 +8,7 @@ import { BrandIcon } from "@/components/social";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
 import { categoryStock, serviceStock, STOCK, type StockImage } from "@/lib/stock";
 import type { Faq, Review, Service, Settings } from "@/lib/types";
-import { cn, filled, formatDisplayDate, safeHttpUrl } from "@/lib/utils";
+import { cn, formatDisplayDate, safeHttpUrl } from "@/lib/utils";
 
 export function PageHero({ eyebrow, title, lede, children, crumbs, image = STOCK.living, src }: { eyebrow: string; title: string; lede: string; children?: React.ReactNode; crumbs?: { href: string; label: string }[]; image?: StockImage[]; src?: string }) {
   return (

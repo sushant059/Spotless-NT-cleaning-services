@@ -64,23 +64,39 @@ export function customerEmail(settings: Settings, input: { name: string; referen
   return { subject: `We received ${input.reference} — ${settings.shortName}`, html, text };
 }
 
-/** Gmail (an app password on the business Gmail) works without owning a domain, so it is preferred. */
+/**
+ * The business mailbox over SMTP (Microsoft 365: smtp.office365.com, port 587), so mail goes out
+ * from info@ and lands in its Sent folder. Gmail and Resend remain as fallbacks.
+ */
+export function smtpEnabled() {
+  return Boolean(process.env.SMTP_USER && process.env.SMTP_PASSWORD);
+}
+
 export function gmailEnabled() {
   return Boolean(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD);
 }
 
 export function emailEnabled() {
-  return gmailEnabled() || Boolean(process.env.RESEND_API_KEY);
+  return smtpEnabled() || gmailEnabled() || Boolean(process.env.RESEND_API_KEY);
 }
 
 /** Sends each message separately. Returns how many went, and the first error if any failed. */
 export async function sendMailEach(messages: (Mail & { replyTo?: string })[]): Promise<{ sent: number; failed: string[]; error?: string }> {
   const failed: string[] = [];
   let error: string | undefined;
-  if (gmailEnabled()) {
+  if (smtpEnabled() || gmailEnabled()) {
     const nodemailer = await import("nodemailer");
-    const transport = nodemailer.createTransport({ service: "gmail", auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD } });
-    const from = process.env.EMAIL_FROM || `Territory Spotless Cleaning <${process.env.GMAIL_USER}>`;
+    const transport = smtpEnabled()
+      ? nodemailer.createTransport({
+          host: process.env.SMTP_HOST || "smtp.office365.com",
+          port: Number(process.env.SMTP_PORT) || 587,
+          secure: Number(process.env.SMTP_PORT) === 465,
+          requireTLS: Number(process.env.SMTP_PORT) !== 465,
+          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
+        })
+      : nodemailer.createTransport({ service: "gmail", auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD } });
+    const sender = smtpEnabled() ? process.env.SMTP_USER : process.env.GMAIL_USER;
+    const from = process.env.EMAIL_FROM || `Territory Spotless Cleaning Services <${sender}>`;
     for (const message of messages) {
       try {
         await transport.sendMail({ from, to: message.to, replyTo: message.replyTo, subject: message.subject, html: message.html, text: message.text });

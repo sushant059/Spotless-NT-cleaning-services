@@ -1,6 +1,6 @@
 -- Spotless NT schema, row level security and storage.
 -- Run this in the Supabase SQL editor (it is safe to run again after updates), then create an Auth user
--- for regmisushant94@gmail.com. The Next.js app seeds content
+-- for info@territoryspotlesscleaningservices.com.au. The Next.js app seeds content
 -- the first time it connects with the service role key.
 
 create table if not exists public.admin_users (
@@ -8,7 +8,7 @@ create table if not exists public.admin_users (
 );
 
 insert into public.admin_users (email)
-values ('regmisushant94@gmail.com')
+values ('info@territoryspotlesscleaningservices.com.au')
 on conflict (email) do nothing;
 
 -- The admin check lives in a private schema so it isn't callable through the public API.
@@ -218,8 +218,8 @@ alter table public.reviews drop constraint if exists reviews_source_check;
 alter table public.reviews add constraint reviews_source_check check (source in ('sample', 'manual', 'google', 'customer'));
 alter table public.reviews drop constraint if exists reviews_status_check;
 alter table public.reviews add constraint reviews_status_check check (status in ('pending', 'approved', 'rejected'));
-update public.site_settings set email = 'regmisushant94@gmail.com' where email = 'regmisusanth94@gmail.com';
-update public.site_settings set notification_email = 'regmisushant94@gmail.com' where notification_email = 'regmisusanth94@gmail.com';
+update public.site_settings set email = 'info@territoryspotlesscleaningservices.com.au' where email = 'regmisusanth94@gmail.com';
+update public.site_settings set notification_email = 'info@territoryspotlesscleaningservices.com.au' where notification_email = 'regmisusanth94@gmail.com';
 delete from public.admin_users where email = 'regmisusanth94@gmail.com';
 
 alter table public.admin_users enable row level security;

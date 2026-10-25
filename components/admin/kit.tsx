@@ -1,7 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 
 /** A form panel: slides up as a full sheet on phones, a centred card on bigger screens. */
@@ -65,5 +70,27 @@ export function CategoryBadges({ ids, labels }: { ids: string[]; labels: Record<
     <span className="flex flex-wrap gap-1">
       {ids.map((id) => <span key={id} className="inline-flex rounded-full bg-brand-light px-2 py-0.5 text-xs font-semibold text-brand">{labels[id] ?? id}</span>)}
     </span>
+  );
+}
+
+/** A small bin button that asks first, runs a delete action and refreshes the page. */
+export function DeleteButton({ label, title, body, action, after }: { label: string; title: string; body: string; action: () => Promise<{ ok: boolean; error?: string; message?: string }>; after?: () => void }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [pending, start] = useTransition();
+  return (
+    <ConfirmDialog
+      title={title}
+      body={body}
+      confirmLabel="Delete"
+      onConfirm={() => start(async () => {
+        const result = await action();
+        toast(result.ok ? result.message || "Deleted" : result.error || "Couldn't delete", result.ok ? "ok" : "error");
+        if (!result.ok) return;
+        if (after) after();
+        else router.refresh();
+      })}
+      trigger={<Button type="button" size="icon" variant="ghost" disabled={pending} aria-label={label} title={label} className="h-9 w-9 text-danger hover:bg-red-50"><Trash2 className="h-4 w-4" aria-hidden /></Button>}
+    />
   );
 }

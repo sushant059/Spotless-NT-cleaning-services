@@ -7,7 +7,7 @@ import { Building2, Camera, ChevronRight, MessageCircle, Phone, Plus, Search, Us
 import { deleteCustomerAction, deleteJobAction, saveCustomerAction, saveJobAction } from "@/lib/actions";
 import { uploadFile } from "@/components/admin/upload";
 import { AddJobButton, type ServiceOption } from "@/components/admin/add-job";
-import { FilterChips, IconLink, Sheet } from "@/components/admin/kit";
+import { DeleteButton, FilterChips, IconLink, Sheet } from "@/components/admin/kit";
 import { MediaImage } from "@/components/media-image";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -118,6 +118,7 @@ export function CustomersBoard({ customers, jobs, services = [], startAdding = f
                       {customer.phone && <IconLink href={waLink(customer.phone, `Hi ${customer.name}, it's Territory Spotless.`)} label={`WhatsApp ${customer.name}`} external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
                       <AddJobButton customers={customers} services={services} customerId={customer.id} size="sm" variant="outline" label="Add job" />
                       <Link href={`/admin/customers/${customer.id}`} className="inline-flex min-h-10 items-center rounded-full bg-navy px-4 text-sm font-semibold text-white hover:bg-navy-deep">Open</Link>
+                      <DeleteButton label={`Delete ${displayName(customer)}`} title={`Delete ${displayName(customer)}?`} body="The customer and all their jobs are removed from the admin, the database and the Google Sheet. This can’t be undone." action={() => deleteCustomerAction(customer.id)} />
                     </div>
                   </td>
                 </tr>
@@ -142,6 +143,7 @@ export function CustomersBoard({ customers, jobs, services = [], startAdding = f
               {customer.phone && <IconLink href={`tel:${customer.phone}`} label={`Call ${customer.name}`}><Phone className="h-4 w-4" aria-hidden /></IconLink>}
               {customer.phone && <IconLink href={waLink(customer.phone, `Hi ${customer.name}, it's Territory Spotless.`)} label={`WhatsApp ${customer.name}`} external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
               <AddJobButton customers={customers} services={services} customerId={customer.id} size="sm" variant="outline" label="Add job" />
+              <span className="ml-auto"><DeleteButton label={`Delete ${displayName(customer)}`} title={`Delete ${displayName(customer)}?`} body="The customer and all their jobs are removed from the admin, the database and the Google Sheet. This can’t be undone." action={() => deleteCustomerAction(customer.id)} /></span>
             </div>
           </li>
         ))}

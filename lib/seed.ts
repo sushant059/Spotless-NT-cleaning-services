@@ -287,7 +287,7 @@ export function seedDatabase(): Database {
       phoneTel: "+61450260799",
       whatsappUrl: "https://wa.me/61450260799?text=Hi%20Territory%20Spotless%2C%20I%27d%20like%20a%20free%20quote.",
       email: "info@territoryspotlesscleaningservices.com.au",
-      notificationEmail: "regmisushant94@gmail.com",
+      notificationEmail: "info@territoryspotlesscleaningservices.com.au",
       address: "",
       serviceAreas: AREAS,
       facebook: "",

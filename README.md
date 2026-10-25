@@ -43,7 +43,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 Development sign-in, only when `NODE_ENV` is not production:
 
-- Email: `regmisushant94@gmail.com`
+- Email: `info@territoryspotlesscleaningservices.com.au`
 - Password: `ADMIN_PASSWORD` from `.env.local`, or `spotless-demo` if that variable is empty
 
 Set a long `AUTH_SECRET` and a real `ADMIN_PASSWORD` before any public deploy. The development password is not accepted as a fallback in production.
@@ -73,7 +73,7 @@ If Supabase or Resend is not configured, quotes, bookings, chat and contact mess
 ## Supabase
 
 1. Create a project and run `supabase/schema.sql` in the SQL editor. It is safe to run again after an update. It adds new columns and fixes the old misspelt owner email.
-2. In Authentication, create a user for `regmisushant94@gmail.com`.
+2. In Authentication, create a user for `info@territoryspotlesscleaningservices.com.au`.
 3. Put the three Supabase keys in `.env.local`.
 4. Restart the app. Empty tables are seeded on the first connection.
 5. Create a public Storage bucket named `media` if the SQL bucket insert did not run (the schema tries to create it).
