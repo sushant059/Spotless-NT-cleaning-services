@@ -283,10 +283,10 @@ export function seedDatabase(): Database {
     settings: {
       businessName: "Territory Spotless Cleaning Services",
       shortName: "Territory Spotless",
-      phoneDisplay: "0401 647 545",
-      phoneTel: "+61401647545",
-      whatsappUrl: "https://wa.me/61401647545?text=Hi%20Territory%20Spotless%2C%20I%27d%20like%20a%20free%20quote.",
-      email: "regmisushant94@gmail.com",
+      phoneDisplay: "0450 260 799",
+      phoneTel: "+61450260799",
+      whatsappUrl: "https://wa.me/61450260799?text=Hi%20Territory%20Spotless%2C%20I%27d%20like%20a%20free%20quote.",
+      email: "info@territoryspotlesscleaningservices.com.au",
       notificationEmail: "regmisushant94@gmail.com",
       address: "",
       serviceAreas: AREAS,
@@ -309,7 +309,7 @@ export function seedDatabase(): Database {
       ],
       seoTitle: "Territory Spotless Cleaning Services | Darwin carpet, couch and mattress cleaning",
       seoDescription:
-        "Carpet, couch, mattress, rug and end-of-lease cleaning for Darwin and surrounding Northern Territory suburbs. Fixed quotes before we start. Call 0401 647 545.",
+        "Carpet, couch, mattress, rug and end-of-lease cleaning for Darwin and surrounding Northern Territory suburbs. Fixed quotes before we start. Call 0450 260 799.",
       heroHeadline: "Fresh, healthy homes across the Top End",
       heroSubtext:
         "Carpet, couch, mattress and bond cleaning from a local NT team. You get a fixed quote before we start, and products chosen with kids and pets in mind.",

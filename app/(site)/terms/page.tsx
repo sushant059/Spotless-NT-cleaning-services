@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import { PageHero } from "@/components/content";
 import { STOCK } from "@/lib/stock";
+import { getDb } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "Terms",
   description: "Terms for quotes and bookings with Territory Spotless Cleaning Services in the Northern Territory.",
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const s = (await getDb()).settings;
   return (
     <>
       <PageHero image={STOCK.living} eyebrow="Terms" title="Terms of service" lede="These terms cover quote requests and cleaning booked with Territory Spotless. They sit alongside the Australian Consumer Law." />
@@ -20,7 +22,7 @@ export default function TermsPage() {
           <p>Payment is due after the clean, by a method we have confirmed with you. Please cancel or move a booking as early as you can. If we have already travelled, a travel fee may apply and we will say so when the booking is confirmed.</p>
           <p>End-of-lease paperwork is a receipt and a short job note. It is not a guarantee that a property manager will release a bond.</p>
           <p>Promo codes are only valid when they are active in our system and we confirm them with the quote. Nothing in these terms limits rights you have under the Australian Consumer Law that cannot be excluded.</p>
-          <p>Questions: regmisushant94@gmail.com or 0401 647 545.</p>
+          <p>Questions: {s.email} or {s.phoneDisplay}.</p>
         </div>
       </section>
     </>

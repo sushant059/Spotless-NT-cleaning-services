@@ -6,7 +6,7 @@ import { supabaseAdmin, usingSupabase } from "@/lib/store";
 
 /**
  * Extra admin logins added by the owner in Settings. Passwords are stored as scrypt hashes,
- * in Supabase (admin_users, locked to the server) or a local JSON file when Supabase is off.
+ * in Supabase (admin_logins, locked to the server) or a local JSON file when Supabase is off.
  * Kept out of the main database object so hashes never reach a page.
  */
 export type AdminUser = { id: string; email: string; name: string; createdAt: string };
@@ -32,7 +32,7 @@ async function checkPassword(password: string, stored: string) {
 async function readAll(): Promise<StoredAdmin[]> {
   const sb = usingSupabase() ? supabaseAdmin() : null;
   if (sb) {
-    const { data, error } = await sb.from("admin_users").select("*").order("created_at");
+    const { data, error } = await sb.from("admin_logins").select("*").order("created_at");
     if (error) throw new Error(error.message);
     return (data ?? []).map((row) => ({ id: row.id, email: row.email, name: row.name, passwordHash: row.password_hash, createdAt: row.created_at }));
   }
@@ -65,7 +65,7 @@ export async function addAdmin(input: { id: string; email: string; name: string;
   const record: StoredAdmin = { id: input.id, email: input.email.toLowerCase(), name: input.name, passwordHash: await hashPassword(input.password), createdAt: new Date().toISOString() };
   const sb = usingSupabase() ? supabaseAdmin() : null;
   if (sb) {
-    const { error } = await sb.from("admin_users").insert({ id: record.id, email: record.email, name: record.name, password_hash: record.passwordHash });
+    const { error } = await sb.from("admin_logins").insert({ id: record.id, email: record.email, name: record.name, password_hash: record.passwordHash });
     if (error) throw new Error(error.message);
     return;
   }
@@ -76,7 +76,7 @@ export async function setAdminPassword(id: string, password: string) {
   const passwordHash = await hashPassword(password);
   const sb = usingSupabase() ? supabaseAdmin() : null;
   if (sb) {
-    const { error } = await sb.from("admin_users").update({ password_hash: passwordHash }).eq("id", id);
+    const { error } = await sb.from("admin_logins").update({ password_hash: passwordHash }).eq("id", id);
     if (error) throw new Error(error.message);
     return;
   }
@@ -86,7 +86,7 @@ export async function setAdminPassword(id: string, password: string) {
 export async function removeAdmin(id: string) {
   const sb = usingSupabase() ? supabaseAdmin() : null;
   if (sb) {
-    const { error } = await sb.from("admin_users").delete().eq("id", id);
+    const { error } = await sb.from("admin_logins").delete().eq("id", id);
     if (error) throw new Error(error.message);
     return;
   }

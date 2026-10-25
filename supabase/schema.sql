@@ -390,3 +390,15 @@ create index if not exists invoices_customer_id_idx on public.invoices (customer
 alter table public.invoices enable row level security;
 drop policy if exists "admin invoices" on public.invoices;
 create policy "admin invoices" on public.invoices for all using (private.is_admin()) with check (private.is_admin());
+
+-- Extra admin panel logins added by the owner in Settings (scrypt password hashes).
+-- Server-only: RLS on with no policies, so only the service role can read it.
+create table if not exists public.admin_logins (
+  id text primary key,
+  email text not null unique,
+  name text not null default '',
+  password_hash text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.admin_logins enable row level security;
+revoke all on public.admin_logins from anon, authenticated;
