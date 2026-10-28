@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Briefcase, CalendarDays, Inbox, MessageSquareQuote, Receipt, Send, TrendingUp } from "lucide-react";
+import { ArrowRight, Briefcase, FileText, CalendarDays, Inbox, MessageSquareQuote, Receipt, Send, TrendingUp } from "lucide-react";
 import { AddJobButton } from "@/components/admin/add-job";
 import { AddCustomerButton, StatusBadge } from "@/components/admin/customers";
 import { EnquiryActions } from "@/components/admin/enquiries";
@@ -38,9 +38,10 @@ export default async function DashboardPage() {
       {(!usingSupabase() || !sheetsEnabled()) && <DataStatus supabase={usingSupabase()} sheets={sheetsEnabled()} />}
 
       {/* Quick actions */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <AddJobButton customers={db.customers} services={services} label="Add job" className="h-full min-h-14 w-full rounded-2xl" />
         <AddCustomerButton className="h-full w-full" />
+        <Link href="/admin/quotes/new" className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-white font-semibold text-navy shadow-card hover:ring-2 hover:ring-brand/30"><FileText className="h-4 w-4 text-brand" aria-hidden /> New quote</Link>
         <Link href="/admin/invoices/new" className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-white font-semibold text-navy shadow-card hover:ring-2 hover:ring-brand/30"><Receipt className="h-4 w-4 text-brand" aria-hidden /> New invoice</Link>
         <Link href="/admin/messages" className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-white font-semibold text-navy shadow-card hover:ring-2 hover:ring-brand/30"><Send className="h-4 w-4 text-brand" aria-hidden /> Send offer</Link>
       </div>

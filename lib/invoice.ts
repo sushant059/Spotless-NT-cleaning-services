@@ -29,6 +29,12 @@ export function nextInvoiceNumber(numbers: string[]) {
   return `INV-${highest + 1}`;
 }
 
+/** Q-1001, Q-1002, … for quotes. */
+export function nextQuoteNumber(numbers: string[]) {
+  const highest = numbers.reduce((max, number) => Math.max(max, Number(number.replace(/\D/g, "")) || 0), 1000);
+  return `Q-${highest + 1}`;
+}
+
 /** "$400", "400", "$1,250.00 inc GST" → 400 / 1250. Anything unreadable → 0. */
 export function parsePrice(text: string) {
   const match = text.replace(/,/g, "").match(/\d+(\.\d{1,2})?/);

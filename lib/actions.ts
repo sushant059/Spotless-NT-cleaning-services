@@ -8,13 +8,14 @@ import { addAdmin, listAdmins, removeAdmin, setAdminPassword, verifyAdmin } from
 import { clearSession, devAdminPassword, getSession, setSession } from "@/lib/auth";
 import { getBotReply } from "@/lib/bot";
 import { SERVICE_CATEGORY_IDS, summariseJob, timeWindowLabel, validateDetails } from "@/lib/constants";
-import { customerEmail, invoiceEmail, offerEmail, ownerLeadEmail, sendMail, sendMailEach } from "@/lib/email";
-import { invoiceTotals, money, nextInvoiceNumber } from "@/lib/invoice";
+import { customerEmail, invoiceEmail, offerEmail, ownerLeadEmail, quoteEmail, quoteResponseEmail, sendMail, sendMailEach } from "@/lib/email";
+import { invoiceTotals, money, nextInvoiceNumber, nextQuoteNumber } from "@/lib/invoice";
+import { quoteMessage } from "@/lib/quote";
 import { sendSms } from "@/lib/sms";
 import { rateLimit } from "@/lib/rate-limit";
 import { seedDatabase } from "@/lib/seed";
 import { getDb, storeMediaFile, supabaseAnon, updateDb, usingSupabase } from "@/lib/store";
-import type { ActionResult, Booking, Customer, Database, DetailValue, Faq, Invoice, InvoiceStatus, Job, Lead, Offer, Promo, ResultPair, Review, Service, Settings } from "@/lib/types";
+import type { ActionResult, Booking, Customer, Database, DetailValue, Faq, Invoice, InvoiceStatus, Job, Lead, Offer, Promo, Quote, QuoteStatus, ResultPair, Review, Service, Settings } from "@/lib/types";
 import { cancelRequestFor, linkEnquiry, matchCustomer } from "@/lib/crm";
 import { dayAvailability, isSlotFull, slotOccupants } from "@/lib/schedule";
 import { bookingSheetRow, customerSheetChanges, jobSheetRow, leadSheetRow, sheetsEnabled, syncEverything, syncSheet } from "@/lib/sheets";
@@ -1448,4 +1449,242 @@ export async function sendInvoiceAction(id: string, channel: "email" | "sms"): P
   });
   revalidatePath("/admin", "layout");
   return { ok: true, message: `Invoice ${invoice.number} ${channel === "email" ? "emailed" : "texted"} to ${customer.name}.` };
+}
+
+/* --------------------------------- Quotes --------------------------------- */
+
+const priceQuoteSchema = z.object({
+  jobId: z.string(),
+  issueDate: isoDate,
+  validUntil: z.union([isoDate, z.literal("")]),
+  items: z
+    .array(z.object({
+      description: z.string().trim().min(2, "Describe each line").max(300),
+      quantity: z.number().positive("Quantity must be more than 0").max(10000),
+      unitPrice: z.number().min(0, "Prices can't be negative").max(1000000),
+    }))
+    .min(1, "Add at least one line")
+    .max(30),
+  discount: z.number().min(0, "Discount can't be negative").max(1000000),
+  notes: z.string().trim().max(2000),
+  message: z.string().trim().max(6000),
+});
+
+export type QuoteContact = { name: string; companyName: string; phone: string; email: string; address: string; suburb: string };
+
+/**
+ * Saves a quote. The customer comes from the contact details on the form: an existing customer is
+ * updated with any phone, email or address typed in, otherwise one is matched by phone/email or created.
+ */
+export async function saveQuoteAction(quote: Quote, contact: QuoteContact): Promise<ActionResult & { id?: string; customerId?: string }> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  const parsed = priceQuoteSchema.safeParse(quote);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message || "Check the quote." };
+  if (parsed.data.validUntil && parsed.data.validUntil < parsed.data.issueDate) return { ok: false, error: "“Valid until” is before the quote date." };
+  const name = contact.name.trim();
+  if (name.length < 2) return { ok: false, error: "Add the customer's name." };
+  const phone = contact.phone.trim() ? normalizeAuPhone(contact.phone) : "";
+  if (phone === null) return { ok: false, error: "Check the phone number." };
+  const email = contact.email.trim().toLowerCase();
+  if (email && !z.string().email().safeParse(email).success) return { ok: false, error: "Check the email address." };
+  if (!phone && !email) return { ok: false, error: "Add a phone number or email so you can send the quote." };
+
+  const id = quote.id || uid("quote");
+  let customerId = quote.customerId;
+  const saved = await updateDb((db) => {
+    const now = nowIso();
+    let customer = db.customers.find((item) => item.id === customerId) ?? matchCustomer(db, { name, phone: phone || "", email });
+    if (customer) {
+      customer.name = name.slice(0, 120);
+      if (contact.companyName.trim()) customer.companyName = contact.companyName.trim().slice(0, 120);
+      if (phone) customer.phone = phone;
+      if (email) customer.email = email.slice(0, 200);
+      if (contact.address.trim()) customer.address = contact.address.trim().slice(0, 300);
+      if (contact.suburb.trim()) customer.suburb = contact.suburb.trim().slice(0, 80);
+      customer.updatedAt = now;
+    } else {
+      customer = {
+        id: uid("cust"),
+        type: contact.companyName.trim() ? "company" : "person",
+        name: name.slice(0, 120),
+        companyName: contact.companyName.trim().slice(0, 120),
+        phone: phone || "",
+        email: email.slice(0, 200),
+        address: contact.address.trim().slice(0, 300),
+        suburb: contact.suburb.trim().slice(0, 80),
+        notes: "",
+        marketingOptIn: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.customers.unshift(customer);
+    }
+    customerId = customer.id;
+    const index = db.quotes.findIndex((item) => item.id === id);
+    const previous = index >= 0 ? db.quotes[index] : null;
+    const next: Quote = {
+      ...parsed.data,
+      id,
+      customerId,
+      number: previous?.number || nextQuoteNumber(db.quotes.map((item) => item.number)),
+      token: previous?.token || randomBytes(18).toString("base64url"),
+      status: previous?.status || "draft",
+      sentAt: previous?.sentAt || "",
+      acceptedAt: previous?.acceptedAt || "",
+      createdAt: previous?.createdAt || now,
+      updatedAt: now,
+    };
+    if (index >= 0) db.quotes[index] = next;
+    else db.quotes.unshift(next);
+  });
+  await syncCustomerSheets(saved, [customerId], []);
+  revalidatePath("/admin", "layout");
+  return { ok: true, id, customerId, message: "Quote saved." };
+}
+
+function quoteLink(quote: Quote) {
+  return `${siteUrl()}/quote/${quote.token}`;
+}
+
+/** Sends the quote by email (to the customer, or any address typed in) or SMS, then marks it sent. */
+export async function sendQuoteAction(id: string, channel: "email" | "sms", to = "", text = ""): Promise<ActionResult> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  const db = await getDb();
+  const quote = db.quotes.find((item) => item.id === id);
+  if (!quote) return { ok: false, error: "Quote not found." };
+  const customer = db.customers.find((item) => item.id === quote.customerId);
+  const settings = db.settings;
+  const message = text.trim().slice(0, 6000) || quote.message.trim() || quoteMessage(settings, quote, customer, quoteLink(quote));
+  const total = money(invoiceTotals(quote, settings.invoice.gstRegistered).total);
+  let sentTo = "";
+  if (channel === "email") {
+    const recipients = (to.trim() || customer?.email || "").split(/[,;\s]+/).map((item) => item.trim()).filter(Boolean);
+    if (!recipients.length) return { ok: false, error: "Add an email address to send the quote to." };
+    if (recipients.some((item) => !z.string().email().safeParse(item).success)) return { ok: false, error: "Check the email address." };
+    const mail = quoteEmail(settings, { number: quote.number, message, total, validUntil: quote.validUntil ? formatDisplayDate(quote.validUntil) : "", link: quoteLink(quote) });
+    const result = await sendMailEach(recipients.map((recipient) => ({ to: recipient, replyTo: settings.email, ...mail })));
+    if (!result.sent) return { ok: false, error: result.error || "The email didn't send. Check the email settings (SMTP_PASSWORD) in Vercel." };
+    sentTo = recipients.join(", ");
+  } else {
+    const phone = to.trim() || customer?.phone || "";
+    if (!phone) return { ok: false, error: "Add a phone number to text the quote to." };
+    const result = await sendSms([{ id: quote.id, to: phone, body: message }]);
+    if (!result.sent.length) return { ok: false, error: result.error || "The text didn't send." };
+    sentTo = phone;
+  }
+  await updateDb((next) => {
+    const item = next.quotes.find((entry) => entry.id === id);
+    if (!item) return;
+    if (item.status === "draft") item.status = "sent";
+    item.sentAt = nowIso();
+    item.updatedAt = nowIso();
+  });
+  revalidatePath("/admin", "layout");
+  return { ok: true, message: `Quote ${quote.number} sent to ${sentTo}.` };
+}
+
+export async function setQuoteStatusAction(id: string, status: QuoteStatus): Promise<ActionResult> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  if (!["draft", "sent", "accepted", "declined"].includes(status)) return { ok: false, error: "Unknown status." };
+  await updateDb((db) => {
+    const quote = db.quotes.find((item) => item.id === id);
+    if (!quote) return;
+    quote.status = status;
+    if (status === "sent" && !quote.sentAt) quote.sentAt = nowIso();
+    quote.acceptedAt = status === "accepted" ? quote.acceptedAt || nowIso() : "";
+    quote.updatedAt = nowIso();
+  });
+  revalidatePath("/admin", "layout");
+  const labels = { draft: "Moved back to draft.", sent: "Marked as sent.", accepted: "Marked as accepted.", declined: "Marked as declined." };
+  return { ok: true, message: labels[status] };
+}
+
+export async function deleteQuoteAction(id: string): Promise<ActionResult> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  await updateDb((db) => {
+    db.quotes = db.quotes.filter((item) => item.id !== id);
+  });
+  revalidatePath("/admin", "layout");
+  return { ok: true, message: "Quote deleted." };
+}
+
+/** Turns an accepted quote into a job (services and price filled in), linked both ways. */
+export async function quoteToJobAction(id: string): Promise<ActionResult & { customerId?: string }> {
+  const auth = await guard();
+  if (!auth.ok) return auth;
+  const db = await getDb();
+  const quote = db.quotes.find((item) => item.id === id);
+  if (!quote) return { ok: false, error: "Quote not found." };
+  if (quote.jobId && db.jobs.some((job) => job.id === quote.jobId)) return { ok: true, customerId: quote.customerId, message: "This quote already has a job." };
+  const customer = db.customers.find((item) => item.id === quote.customerId);
+  const total = money(invoiceTotals(quote, db.settings.invoice.gstRegistered).total);
+  const result = await saveJobAction({
+    id: "",
+    reference: "",
+    customerId: quote.customerId,
+    services: quote.items.map((item) => (item.quantity !== 1 ? `${item.description} × ${item.quantity}` : item.description)).join("\n"),
+    address: [customer?.address, customer?.suburb].filter(Boolean).join(", "),
+    scheduledDate: "",
+    timeWindow: "",
+    completedDate: "",
+    price: total,
+    status: "requested",
+    notes: `From quote ${quote.number}.${quote.notes ? ` ${quote.notes}` : ""}`.slice(0, 1000),
+    beforePhotos: [],
+    afterPhotos: [],
+    history: [],
+    sourceRef: quote.number,
+    createdAt: "",
+    updatedAt: "",
+  });
+  if (!result.ok) return result;
+  await updateDb((next) => {
+    const item = next.quotes.find((entry) => entry.id === id);
+    if (!item) return;
+    item.jobId = result.id || "";
+    if (item.status !== "accepted") {
+      item.status = "accepted";
+      item.acceptedAt = item.acceptedAt || nowIso();
+    }
+    item.updatedAt = nowIso();
+  });
+  revalidatePath("/admin", "layout");
+  return { ok: true, customerId: quote.customerId, message: "Job created from the quote. Set the date and time on the job." };
+}
+
+/** Public: the customer accepts or declines from their quote link. The owner gets an email. */
+export async function respondToQuoteAction(token: string, accept: boolean): Promise<ActionResult> {
+  const block = limited(await clientKey("quote-response"), 10, 60 * 60 * 1000);
+  if (block) return block;
+  if (!/^[A-Za-z0-9_-]{20,}$/.test(token)) return { ok: false, error: "Quote not found." };
+  let found: Quote | undefined;
+  const saved = await updateDb((db) => {
+    const quote = db.quotes.find((item) => item.token === token);
+    if (!quote || quote.status === "draft") return;
+    found = quote;
+    if (quote.status === "accepted" && accept) return;
+    quote.status = accept ? "accepted" : "declined";
+    quote.acceptedAt = accept ? nowIso() : "";
+    quote.updatedAt = nowIso();
+  });
+  const quote = found as Quote | undefined;
+  if (!quote) return { ok: false, error: "Quote not found." };
+  const customer = saved.customers.find((item) => item.id === quote.customerId);
+  const settings = saved.settings;
+  const mail = quoteResponseEmail(settings, {
+    number: quote.number,
+    name: customer?.name || "Customer",
+    phone: customer?.phone || "",
+    email: customer?.email || "",
+    total: money(invoiceTotals(quote, settings.invoice.gstRegistered).total),
+    accepted: accept,
+    adminLink: `${siteUrl()}/admin/quotes/${quote.id}`,
+  });
+  if (settings.notificationEmail) await sendMail([{ to: settings.notificationEmail, ...mail }]);
+  revalidatePath("/admin", "layout");
+  return { ok: true, message: accept ? "Thanks! Your quote is accepted. We'll be in touch to book a time." : "Thanks for letting us know." };
 }

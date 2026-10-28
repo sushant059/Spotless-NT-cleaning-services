@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { ArrowUpRight, MessageCircle, Phone, Receipt, Search } from "lucide-react";
+import { ArrowUpRight, FileText, MessageCircle, Phone, Receipt, Search } from "lucide-react";
 import { CategoryBadges, DeleteButton, FilterChips, IconLink } from "@/components/admin/kit";
 import { Input } from "@/components/ui/fields";
 import { useToast } from "@/components/ui/toaster";
@@ -177,6 +177,7 @@ function JobActions({ row }: { row: JobRow }) {
     <>
       {phone && <IconLink href={`tel:${phone}`} label="Call customer"><Phone className="h-4 w-4" aria-hidden /></IconLink>}
       {phone && <IconLink href={waLink(phone, `Hi ${row.customer?.name}, it's Territory Spotless about your clean (${row.job.reference}).`)} label="WhatsApp customer" external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
+      <Link href={`/admin/quotes/new?job=${row.job.id}`} className="inline-flex min-h-9 items-center gap-1 whitespace-nowrap rounded-full bg-brand-light px-3 text-xs font-bold text-brand hover:bg-brand hover:text-white"><FileText className="h-3.5 w-3.5" aria-hidden /> Quote</Link>
       {row.invoice ? (
         <Link href={`/admin/invoices/${row.invoice.id}`} className="inline-flex min-h-9 items-center gap-1 whitespace-nowrap rounded-full bg-leaf-soft px-3 text-xs font-bold text-leaf-dark"><Receipt className="h-3.5 w-3.5" aria-hidden /> {row.invoice.number}</Link>
       ) : (

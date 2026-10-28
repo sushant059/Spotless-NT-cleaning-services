@@ -402,3 +402,25 @@ create table if not exists public.admin_logins (
 );
 alter table public.admin_logins enable row level security;
 revoke all on public.admin_logins from anon, authenticated;
+
+-- Quotes: priced offers sent before a job; customers accept from their private link.
+create table if not exists public.quotes (
+  id text primary key,
+  number text not null,
+  token text not null unique,
+  customer_id text not null default '',
+  job_id text not null default '',
+  issue_date date,
+  valid_until date,
+  items jsonb not null default '[]'::jsonb,
+  discount numeric not null default 0,
+  notes text not null default '',
+  message text not null default '',
+  status text not null default 'draft',
+  sent_at timestamptz,
+  accepted_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.quotes enable row level security;
+revoke all on public.quotes from anon, authenticated;

@@ -403,5 +403,6 @@ export function seedDatabase(): Database {
     jobs: [],
     campaigns: [],
     invoices: [],
+    quotes: [],
   };
 }

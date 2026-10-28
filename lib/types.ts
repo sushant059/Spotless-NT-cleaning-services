@@ -101,6 +101,31 @@ export type Invoice = {
   updatedAt: string;
 };
 
+export type QuoteStatus = "draft" | "sent" | "accepted" | "declined";
+
+/** A price offer sent before the job. Same line items as an invoice; the customer can accept it online. */
+export type Quote = {
+  id: string;
+  number: string;
+  /** Secret part of the customer's link to view, print and accept the quote. */
+  token: string;
+  customerId: string;
+  jobId: string;
+  issueDate: string;
+  validUntil: string;
+  items: InvoiceItem[];
+  discount: number;
+  /** What's included, conditions, access notes: printed on the quote. */
+  notes: string;
+  /** The covering message sent by email, WhatsApp or SMS. */
+  message: string;
+  status: QuoteStatus;
+  sentAt: string;
+  acceptedAt: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Offer = {
   id: string;
   title: string;
@@ -284,6 +309,7 @@ export type Database = {
   jobs: Job[];
   campaigns: Campaign[];
   invoices: Invoice[];
+  quotes: Quote[];
 };
 
 export type ActionResult =

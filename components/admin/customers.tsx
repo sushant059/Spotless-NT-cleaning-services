@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Camera, ChevronRight, MessageCircle, Phone, Plus, Search, User, UserPlus } from "lucide-react";
+import { Building2, Camera, ChevronRight, FileText, MessageCircle, Phone, Plus, Search, User, UserPlus } from "lucide-react";
 import { deleteCustomerAction, deleteJobAction, saveCustomerAction, saveJobAction } from "@/lib/actions";
 import { uploadFile } from "@/components/admin/upload";
 import { AddJobButton, type ServiceOption } from "@/components/admin/add-job";
@@ -117,6 +117,7 @@ export function CustomersBoard({ customers, jobs, services = [], startAdding = f
                       {customer.phone && <IconLink href={`tel:${customer.phone}`} label={`Call ${customer.name}`}><Phone className="h-4 w-4" aria-hidden /></IconLink>}
                       {customer.phone && <IconLink href={waLink(customer.phone, `Hi ${customer.name}, it's Territory Spotless.`)} label={`WhatsApp ${customer.name}`} external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
                       <AddJobButton customers={customers} services={services} customerId={customer.id} size="sm" variant="outline" label="Add job" />
+                      <Link href={`/admin/quotes/new?customer=${customer.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-brand-light px-4 text-sm font-semibold text-brand hover:bg-brand hover:text-white"><FileText className="h-4 w-4" aria-hidden /> Quote</Link>
                       <Link href={`/admin/customers/${customer.id}`} className="inline-flex min-h-10 items-center rounded-full bg-navy px-4 text-sm font-semibold text-white hover:bg-navy-deep">Open</Link>
                       <DeleteButton label={`Delete ${displayName(customer)}`} title={`Delete ${displayName(customer)}?`} body="The customer and all their jobs are removed from the admin, the database and the Google Sheet. This can’t be undone." action={() => deleteCustomerAction(customer.id)} />
                     </div>
@@ -143,6 +144,7 @@ export function CustomersBoard({ customers, jobs, services = [], startAdding = f
               {customer.phone && <IconLink href={`tel:${customer.phone}`} label={`Call ${customer.name}`}><Phone className="h-4 w-4" aria-hidden /></IconLink>}
               {customer.phone && <IconLink href={waLink(customer.phone, `Hi ${customer.name}, it's Territory Spotless.`)} label={`WhatsApp ${customer.name}`} external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
               <AddJobButton customers={customers} services={services} customerId={customer.id} size="sm" variant="outline" label="Add job" />
+              <Link href={`/admin/quotes/new?customer=${customer.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-brand-light px-4 text-sm font-semibold text-brand"><FileText className="h-4 w-4" aria-hidden /> Quote</Link>
               <span className="ml-auto"><DeleteButton label={`Delete ${displayName(customer)}`} title={`Delete ${displayName(customer)}?`} body="The customer and all their jobs are removed from the admin, the database and the Google Sheet. This can’t be undone." action={() => deleteCustomerAction(customer.id)} /></span>
             </div>
           </li>
@@ -238,6 +240,7 @@ export function CustomerHeader({ customer }: { customer: Customer }) {
           {customer.type === "company" && <p className="text-slate">Contact: {customer.name}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href={`/admin/quotes/new?customer=${customer.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-brand-light px-4 text-sm font-semibold text-brand hover:bg-brand hover:text-white"><FileText className="h-4 w-4" aria-hidden /> Quote</Link>
           <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)}>Edit details</Button>
           <ConfirmDialog title="Delete this customer?" body="This deletes the customer and all their jobs from the admin, Supabase and Google Sheet." confirmLabel="Delete" onConfirm={() => start(async () => { const result = await deleteCustomerAction(customer.id); toast(result.ok ? result.message || "Deleted" : result.error, result.ok ? "ok" : "error"); if (result.ok) router.push("/admin/customers"); })} trigger={<Button type="button" size="sm" variant="danger" disabled={pending}>Delete</Button>} />
         </div>
@@ -333,6 +336,7 @@ function JobCard({ job, invoice }: { job: Job; invoice?: Invoice }) {
           {(job.status === "complaint" || job.status === "done") && <Button type="button" size="sm" variant="outline" disabled={pending} onClick={() => move("redo", "Redo booked")}>Book redo</Button>}
           {job.status !== "cancelled" && job.status !== "done" && <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => move("cancelled")}>Cancel job</Button>}
           {note.trim() && <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => move(job.status)}>Add note only</Button>}
+          <Link href={`/admin/quotes/new?job=${job.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-brand-light px-4 text-sm font-semibold text-brand hover:bg-brand hover:text-white"><FileText className="h-4 w-4" aria-hidden /> Quote</Link>
           {invoice ? (
             <Link href={`/admin/invoices/${invoice.id}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-leaf-soft px-4 text-sm font-semibold text-leaf-dark"><Receipt className="h-4 w-4" aria-hidden /> Invoice {invoice.number}{invoice.status === "paid" ? " · paid" : ""}</Link>
           ) : (

@@ -8,6 +8,7 @@ import type {
   Booking,
   Customer,
   Invoice,
+  Quote,
   InvoiceItem,
   Job,
   Database,
@@ -108,6 +109,7 @@ export function normalizeDb(db: Database): Database {
   db.settings.slotCapacity = Math.max(1, Number(db.settings.slotCapacity) || 1);
   db.campaigns = Array.isArray(db.campaigns) ? db.campaigns : [];
   db.invoices = Array.isArray(db.invoices) ? db.invoices : [];
+  db.quotes = Array.isArray(db.quotes) ? db.quotes : [];
   db.settings.invoice = { ...fresh.settings.invoice, ...(db.settings.invoice ?? {}) };
   db.bookings = db.bookings.map((booking) => ({ ...booking, promoCode: booking.promoCode ?? "", promoMessage: booking.promoMessage ?? "" }));
   // Placeholder reviews from early builds are dropped; the next save removes them from Supabase too.
@@ -256,7 +258,7 @@ async function loadSupabase(sb: SupabaseClient, seedIfEmpty: boolean): Promise<D
     await syncSupabase(sb, null, seedDatabase());
     return loadSupabase(sb, false);
   }
-  const [services, offers, promos, leads, bookings, results, reviews, faqs, blocked, media, customers, jobs, campaigns, invoices] = await Promise.all([
+  const [services, offers, promos, leads, bookings, results, reviews, faqs, blocked, media, customers, jobs, campaigns, invoices, quotes] = await Promise.all([
     expect(await sb.from("services").select("*")),
     expect(await sb.from("offers").select("*")),
     expect(await sb.from("promo_codes").select("*")),
@@ -271,6 +273,7 @@ async function loadSupabase(sb: SupabaseClient, seedIfEmpty: boolean): Promise<D
     expect(await sb.from("jobs").select("*").order("created_at", { ascending: false })),
     expect(await sb.from("campaigns").select("*").order("created_at", { ascending: false })),
     expect(await sb.from("invoices").select("*").order("created_at", { ascending: false })),
+    expect(await sb.from("quotes").select("*").order("created_at", { ascending: false })),
   ]);
   return normalizeDb({
     version: 1,
@@ -356,6 +359,7 @@ async function loadSupabase(sb: SupabaseClient, seedIfEmpty: boolean): Promise<D
       createdAt: String(row.created_at),
     })),
     invoices: (invoices as Record<string, unknown>[]).map(mapInvoice),
+    quotes: (quotes as Record<string, unknown>[]).map(mapQuote),
   });
 }
 
@@ -376,6 +380,48 @@ function mapInvoice(row: Record<string, unknown>): Invoice {
     paidAt: String(row.paid_at ?? ""),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at ?? row.created_at),
+  };
+}
+
+function mapQuote(row: Record<string, unknown>): Quote {
+  return {
+    id: String(row.id),
+    number: String(row.number ?? ""),
+    token: String(row.token ?? ""),
+    customerId: String(row.customer_id ?? ""),
+    jobId: String(row.job_id ?? ""),
+    issueDate: String(row.issue_date ?? ""),
+    validUntil: String(row.valid_until ?? ""),
+    items: asArray<InvoiceItem>(row.items).map((item) => ({ description: String(item.description ?? ""), quantity: Number(item.quantity) || 0, unitPrice: Number(item.unitPrice) || 0 })),
+    discount: Number(row.discount ?? 0) || 0,
+    notes: String(row.notes ?? ""),
+    message: String(row.message ?? ""),
+    status: (["draft", "sent", "accepted", "declined"].includes(String(row.status)) ? row.status : "draft") as Quote["status"],
+    sentAt: String(row.sent_at ?? ""),
+    acceptedAt: String(row.accepted_at ?? ""),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at ?? row.created_at),
+  };
+}
+
+export function quoteRow(quote: Quote) {
+  return {
+    id: quote.id,
+    number: quote.number,
+    token: quote.token,
+    customer_id: quote.customerId,
+    job_id: quote.jobId,
+    issue_date: quote.issueDate || null,
+    valid_until: quote.validUntil || null,
+    items: quote.items,
+    discount: quote.discount,
+    notes: quote.notes,
+    message: quote.message,
+    status: quote.status,
+    sent_at: quote.sentAt || null,
+    accepted_at: quote.acceptedAt || null,
+    created_at: quote.createdAt,
+    updated_at: quote.updatedAt,
   };
 }
 
@@ -674,6 +720,7 @@ function snapshot(db: Database): Snapshot {
     db.campaigns.map((item) => ({ id: item.id, title: item.title, message: item.message, channel: item.channel, recipient_ids: item.recipientIds, created_at: item.createdAt })),
   );
   replaceRows("invoices", db.invoices.map(invoiceRow));
+  replaceRows("quotes", db.quotes.map(quoteRow));
   return { settings: JSON.stringify(settingsRow(db.settings)), tables };
 }
 

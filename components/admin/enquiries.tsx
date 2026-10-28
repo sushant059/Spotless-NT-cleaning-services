@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useMemo, useState, useTransition } from "react";
-import { CalendarPlus, ChevronDown, Mail, MessageCircle, Phone, Search, Trash2, UserPlus, UserRoundCheck } from "lucide-react";
+import { CalendarPlus, ChevronDown, FileText, Mail, MessageCircle, Phone, Search, Trash2, UserPlus, UserRoundCheck } from "lucide-react";
 import { StatusBadge } from "@/components/admin/customers";
 import { CategoryBadges, FilterChips, IconLink, Sheet } from "@/components/admin/kit";
 import { Button } from "@/components/ui/button";
@@ -213,6 +213,7 @@ function RowActions({ row, wide = false }: { row: EnquiryRow; wide?: boolean }) 
       ) : (
         <BookJobButton row={row} wide={wide} />
       )}
+      <Link href={row.job ? `/admin/quotes/new?job=${row.job.id}` : `/admin/quotes/new?${row.kind}=${row.id}`} className={cn("inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-brand-light px-3 text-xs font-bold text-brand hover:bg-brand hover:text-white", wide && "min-h-10 text-sm")}><FileText className="h-4 w-4" aria-hidden /> Quote</Link>
       {row.phone && <IconLink href={`tel:${row.phone}`} label={`Call ${row.name}`}><Phone className="h-4 w-4" aria-hidden /></IconLink>}
       {row.phone && <IconLink href={waLink(row.phone, `Hi ${row.name}, it's Territory Spotless about ${row.reference}.`)} label={`WhatsApp ${row.name}`} external className="text-[#1DA851]"><MessageCircle className="h-4 w-4" aria-hidden /></IconLink>}
       {row.email && wide && <IconLink href={`mailto:${row.email}`} label={`Email ${row.name}`}><Mail className="h-4 w-4" aria-hidden /></IconLink>}

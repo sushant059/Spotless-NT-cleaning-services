@@ -1,17 +1,22 @@
 import { Resend } from "resend";
-import { escapeHtml, waLink } from "@/lib/utils";
+import { escapeHtml, siteUrl, waLink } from "@/lib/utils";
 import type { Settings } from "@/lib/types";
 
 type Mail = { to: string; subject: string; html: string; text: string };
 
 function shell(settings: Settings, body: string) {
-  return `<!doctype html><html><body style="margin:0;background:#EAF8FA;font-family:Arial,sans-serif;color:#17343C">
-  <div style="max-width:560px;margin:0 auto;padding:24px">
-    <div style="background:#066676;border-radius:16px;padding:20px 24px">
-      <div style="color:#ffffff;font-size:22px;font-weight:700">${escapeHtml(settings.shortName)}</div>
-      <div style="color:#ffffff;font-size:13px;letter-spacing:1px">CLEANING SERVICES</div>
+  const logo = `${siteUrl()}/brand/signature-icon.png`;
+  return `<!doctype html><html><body style="margin:0;background:#F2F6FB;font-family:Arial,Helvetica,sans-serif;color:#13202F">
+  <div style="max-width:580px;margin:0 auto;padding:24px">
+    <div style="background:#0F2D4F;border-radius:16px;padding:16px 20px">
+      <table cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="padding-right:12px"><img src="${logo}" width="48" height="48" alt="" style="display:block;border-radius:10px;border:0"></td>
+        <td><div style="color:#ffffff;font-size:19px;font-weight:700;letter-spacing:.5px">${escapeHtml(settings.businessName.replace(/ Cleaning Services$/i, "").toUpperCase())}</div>
+        <div style="color:#5ED184;font-size:11px;letter-spacing:3px;font-weight:700">CLEANING SERVICES</div></td>
+      </tr></table>
     </div>
-    <div style="background:#ffffff;border-radius:16px;padding:24px;margin-top:16px;line-height:1.5">${body}</div>
+    <div style="background:#ffffff;border-radius:16px;padding:24px;margin-top:14px;line-height:1.55;border:1px solid #E5EAF0">${body}</div>
+    <p style="text-align:center;font-size:12px;color:#566476;margin:14px 0 0">${escapeHtml(settings.businessName)} · ${escapeHtml(settings.phoneDisplay)} · ${escapeHtml(settings.email)}</p>
   </div></body></html>`;
 }
 
@@ -148,10 +153,38 @@ export function invoiceEmail(settings: Settings, input: { number: string; name: 
     <h1 style="font-size:22px;margin:0 0 12px">${kind} ${escapeHtml(input.number)}</h1>
     <p>Hi ${escapeHtml(input.name)}, thanks for choosing ${escapeHtml(settings.shortName)}. Here is your invoice.</p>
     <p style="font-size:20px;margin:16px 0"><strong>Amount due: ${escapeHtml(input.total)}</strong>${input.dueDate ? `<br><span style="font-size:15px">Due ${escapeHtml(input.dueDate)}</span>` : ""}</p>
-    <p><a href="${input.link}" style="display:inline-block;background:#0B2F5E;color:#ffffff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:700">View or print the invoice</a></p>
+    <p><a href="${input.link}" style="display:inline-block;background:#0F2D4F;color:#ffffff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:700">View or print the invoice</a></p>
     ${input.bank ? `<p style="margin-top:16px"><strong>Pay by bank transfer</strong><br>${escapeHtml(input.bank).replace(/\n/g, "<br>")}<br>Reference: ${escapeHtml(input.number)}</p>` : ""}
     <p style="margin-top:16px;font-size:13px;color:#4A5D75">Questions? Call ${escapeHtml(settings.phoneDisplay)} or reply to this email.</p>
   `);
   const text = [`${kind} ${input.number}`, `Hi ${input.name}, here is your invoice from ${settings.shortName}.`, `Amount due: ${input.total}${input.dueDate ? `, due ${input.dueDate}` : ""}`, `View or print: ${input.link}`, input.bank ? `Pay by bank transfer:\n${input.bank}\nReference: ${input.number}` : "", `Questions? Call ${settings.phoneDisplay}.`].filter(Boolean).join("\n\n");
   return { subject: `${kind} ${input.number} from ${settings.shortName} – ${input.total}`, html, text };
+}
+
+/** A quote: the covering message as written in the admin, a summary box and a button to view and accept. */
+export function quoteEmail(settings: Settings, input: { number: string; message: string; total: string; validUntil: string; link: string }) {
+  const paragraphs = input.message.split(/\n{2,}/).filter((part) => part.trim()).map((part) => `<p style="margin:0 0 14px">${escapeHtml(part).replace(/\n/g, "<br>").replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#1F63B4">$1</a>')}</p>`).join("");
+  const html = shell(settings, `
+    <div style="background:#F2F6FB;border-radius:12px;padding:14px 16px;margin:0 0 18px">
+      <div style="font-size:12px;letter-spacing:2px;color:#566476;font-weight:700">QUOTE ${escapeHtml(input.number)}</div>
+      <div style="font-size:24px;font-weight:700;color:#0F2D4F;margin-top:4px">${escapeHtml(input.total)}</div>
+      ${input.validUntil ? `<div style="font-size:13px;color:#566476">Valid until ${escapeHtml(input.validUntil)}</div>` : ""}
+    </div>
+    ${paragraphs}
+    <p style="margin:18px 0 0"><a href="${input.link}" style="display:inline-block;background:#2F9E4F;color:#ffffff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:700">View &amp; accept your quote</a></p>
+  `);
+  return { subject: `Your quote ${input.number} from ${settings.shortName} – ${input.total}`, html, text: input.message };
+}
+
+/** Tells the owner a customer accepted (or declined) a quote from their link. */
+export function quoteResponseEmail(settings: Settings, input: { number: string; name: string; phone: string; email: string; total: string; accepted: boolean; adminLink: string }) {
+  const verb = input.accepted ? "accepted" : "declined";
+  const html = shell(settings, `
+    <h1 style="font-size:21px;margin:0 0 10px">${input.accepted ? "✅" : "❌"} Quote ${escapeHtml(input.number)} ${verb}</h1>
+    ${row("Customer", input.name)}${row("Phone", input.phone)}${row("Email", input.email)}${row("Total", input.total)}
+    <p style="margin-top:16px"><a href="${input.adminLink}" style="display:inline-block;background:#0F2D4F;color:#ffffff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:700">Open the quote</a></p>
+    ${input.accepted ? `<p style="font-size:13px;color:#566476">Next: call them to lock in a time, then use “Book job” on the quote.</p>` : ""}
+  `);
+  const text = `Quote ${input.number} ${verb} by ${input.name} (${input.phone || input.email}). Total ${input.total}. ${input.adminLink}`;
+  return { subject: `Quote ${input.number} ${verb} – ${input.name}`, html, text };
 }

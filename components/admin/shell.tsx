@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BadgePercent, Briefcase, Menu, Receipt, X, CalendarDays, ExternalLink, Images, Inbox, LayoutDashboard, ListChecks, LogOut, MessageSquareQuote, MoreHorizontal, Send, Settings, Sparkles, SquareStack, Users } from "lucide-react";
+import { BadgePercent, Briefcase, FileText, Menu, Receipt, X, CalendarDays, ExternalLink, Images, Inbox, LayoutDashboard, ListChecks, LogOut, MessageSquareQuote, MoreHorizontal, Send, Settings, Sparkles, SquareStack, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Logo } from "@/components/brand";
 import { logoutAction } from "@/lib/actions";
@@ -20,6 +20,7 @@ const GROUPS: { title: string; links: NavLink[] }[] = [
       ["/admin/jobs", "Jobs", Briefcase],
       ["/admin/calendar", "Calendar", CalendarDays],
       ["/admin/customers", "Customers", Users],
+      ["/admin/quotes", "Quotes", FileText],
       ["/admin/invoices", "Invoices", Receipt],
     ],
   },
