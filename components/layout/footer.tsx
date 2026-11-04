@@ -4,7 +4,7 @@ import { Logo } from "@/components/brand";
 import { Sparkle } from "@/components/art/sparkle";
 import { SocialIcons } from "@/components/social";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
-import { areaSlug } from "@/lib/areas";
+import { areaSlug, mainAreas } from "@/lib/areas";
 import type { Service, Settings } from "@/lib/types";
 import { byOrder, filled } from "@/lib/utils";
 
@@ -59,13 +59,20 @@ export function Footer({ settings, services }: { settings: Settings; services: S
             </ul>
           </div>
         </div>
-        <div className="border-t border-white/10 py-6 text-sm">
+        <div className="flex flex-col gap-4 border-t border-white/10 py-6 lg:flex-row lg:items-center lg:justify-between">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky">Areas we clean</p>
-          <p className="mt-3 leading-7 text-white/60">
-            {settings.serviceAreas.map((area, index) => (
-              <span key={area}>{index > 0 && " · "}<Link className="hover:text-white" href={`/areas/${areaSlug(area)}`}>{area}</Link></span>
+          <ul className="flex flex-wrap gap-2">
+            {mainAreas(settings.serviceAreas).map((area) => (
+              <li key={area.name}>
+                <Link href={`/areas/${areaSlug(area.name)}`} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-white/[0.06] px-3.5 text-sm font-semibold text-white/80 ring-1 ring-white/10 transition hover:bg-white/15 hover:text-white">
+                  <MapPin className="h-3.5 w-3.5 text-leaf" aria-hidden /> {area.name}
+                </Link>
+              </li>
             ))}
-          </p>
+            <li>
+              <Link href="/areas" className="inline-flex min-h-10 items-center gap-1 rounded-full bg-leaf/90 px-4 text-sm font-bold text-white transition hover:bg-leaf">All areas →</Link>
+            </li>
+          </ul>
         </div>
         <div className="flex flex-col gap-2 border-t border-white/10 py-6 text-sm text-white/55 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} {settings.businessName}{filled(settings.abn) ? ` · ABN ${settings.abn}` : ""}</p>

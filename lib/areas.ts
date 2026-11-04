@@ -42,3 +42,17 @@ export function nearbyAreas(areas: string[], suburb: string, count = 6) {
   const index = Math.max(0, same.findIndex((area) => area.localeCompare(suburb) > 0));
   return [...same.slice(index), ...same.slice(0, index)].slice(0, count);
 }
+
+/** The handful of suburbs we lead with: one or two per region, the names people search for. */
+export const MAIN_AREAS: { name: string; blurb: string }[] = [
+  { name: "Darwin City", blurb: "CBD apartments, units & offices" },
+  { name: "Palmerston City", blurb: "Family homes & rentals" },
+  { name: "Casuarina", blurb: "Northern suburbs hub" },
+  { name: "Nightcliff", blurb: "Beachside homes" },
+  { name: "Howard Springs", blurb: "Rural blocks & acreage" },
+  { name: "Humpty Doo", blurb: "Litchfield & the rural area" },
+];
+
+export function mainAreas(areas: string[]) {
+  return MAIN_AREAS.filter((area) => areas.includes(area.name));
+}
