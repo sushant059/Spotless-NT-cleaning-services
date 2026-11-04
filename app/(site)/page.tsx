@@ -50,6 +50,17 @@ export default async function HomePage() {
               <span className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-leaf" aria-hidden /> Kid & pet safe</span>
               <a href={`tel:${s.phoneTel}`} className="flex items-center gap-2 hover:text-white"><Phone className="h-5 w-5 text-leaf" aria-hidden /> {s.phoneDisplay}</a>
             </div>
+            {/* Reviews: right at the top, so happy customers can leave one in a tap */}
+            <div className="mt-8 flex flex-col gap-3 rounded-[26px] bg-white/10 p-3 ring-1 ring-white/15 backdrop-blur sm:inline-flex sm:flex-row sm:items-center sm:rounded-full sm:p-2 sm:pl-5">
+              <span className="flex items-center gap-2 px-1 text-sm font-semibold text-white/90 sm:px-0">
+                <span className="flex text-[#FFC93C]" aria-hidden>{[0, 1, 2, 3, 4].map((i) => <Star key={i} className="h-4 w-4 fill-current" />)}</span>
+                Happy with your clean?
+              </span>
+              <span className="grid grid-cols-2 gap-2 sm:flex">
+                <Link href="/reviews#write" className="press inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#FFC93C] px-4 text-sm font-bold text-navy transition hover:bg-[#FFD866]"><Star className="h-4 w-4 fill-navy" aria-hidden /> Leave a review</Link>
+                <GoogleReviewButton settings={s} label="Google review" className="min-h-11 border-0 px-4 text-sm font-bold" />
+              </span>
+            </div>
           </div>
 
           {/* Photo collage with gentle motion */}

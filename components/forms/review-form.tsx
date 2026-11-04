@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Star } from "lucide-react";
+import { CheckCircle2, Copy, Star } from "lucide-react";
 import { submitReviewAction } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label, Select, Textarea } from "@/components/ui/fields";
@@ -16,6 +16,16 @@ export function ReviewForm({ services, googleUrl }: { services: string[]; google
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState("");
+  const [posted, setPosted] = useState({ text: "", rating: 0 });
+  const [copied, setCopied] = useState(false);
+
+  async function copyAndOpen() {
+    try {
+      await navigator.clipboard.writeText(posted.text);
+      setCopied(true);
+    } catch {}
+    window.open(googleUrl, "_blank", "noopener,noreferrer");
+  }
 
   if (done) {
     return (
@@ -23,12 +33,19 @@ export function ReviewForm({ services, googleUrl }: { services: string[]; google
         <CheckCircle2 className="mx-auto h-14 w-14 text-leaf-dark" aria-hidden />
         <h3 className="mt-4 font-display text-2xl font-bold text-navy">Thank you!</h3>
         <p className="mt-2 text-slate">{done}</p>
-        <div className="mt-6 rounded-2xl bg-mist p-5">
-          <p className="font-semibold text-navy">Would you share it on Google too?</p>
-          <p className="mt-1 text-sm text-slate">It really helps a small local business get found.</p>
-          <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex min-h-12 items-center gap-2.5 rounded-full bg-white px-5 font-semibold text-navy shadow-card ring-1 ring-line hover:ring-[#4285F4]">
-            <BrandIcon name="google" className="h-5 w-5 text-[#4285F4]" /> Post on Google
-          </a>
+        <div className="mt-6 rounded-2xl bg-mist p-5 text-left">
+          <p className="text-center font-semibold text-navy">One more tap: share it on Google too?</p>
+          <p className="mt-1 text-center text-sm text-slate">It’s the biggest help a small Darwin business can get. We’ll copy your words so you only need to paste.</p>
+          {posted.text && <blockquote className="mt-4 rounded-xl bg-white p-4 text-sm italic text-ink ring-1 ring-line"><span className="mb-1 block not-italic text-sun">{"★".repeat(posted.rating)}</span>“{posted.text}”</blockquote>}
+          <ol className="mt-4 space-y-1 text-sm text-slate">
+            <li><b className="text-navy">1.</b> Tap the button: your review is copied and Google opens.</li>
+            <li><b className="text-navy">2.</b> Choose your stars, then paste (long-press → Paste).</li>
+            <li><b className="text-navy">3.</b> Tap Post. Done!</li>
+          </ol>
+          <button type="button" onClick={copyAndOpen} className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-full bg-white px-5 font-bold text-navy shadow-card ring-2 ring-[#4285F4]/30 transition hover:ring-[#4285F4]">
+            <BrandIcon name="google" className="h-5 w-5 text-[#4285F4]" /> {copied ? "Copied! Opening Google…" : "Copy my review & open Google"}
+          </button>
+          {copied && <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-leaf-dark"><Copy className="h-3.5 w-3.5" aria-hidden /> Your review is on your clipboard, ready to paste.</p>}
         </div>
       </div>
     );
@@ -56,6 +73,7 @@ export function ReviewForm({ services, googleUrl }: { services: string[]; google
           setErrors({ ...(result.fields || {}), form: result.fields ? "" : result.error });
           return;
         }
+        setPosted({ text: String(form.get("text") || ""), rating });
         setDone(result.message || "Your review has been sent.");
       }}
     >

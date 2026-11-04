@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { ChatWidget } from "@/components/chat/chat-widget";
 import { FloatingActions } from "@/components/layout/floating";
+import { ReviewDock } from "@/components/layout/review-dock";
+import { safeHttpUrl } from "@/lib/utils";
 import type { Service, Settings } from "@/lib/types";
 
 export function SiteWidgets({ settings, services }: { settings: Settings; services: Pick<Service, "slug" | "title" | "icon" | "category">[] }) {
@@ -22,6 +24,7 @@ export function SiteWidgets({ settings, services }: { settings: Settings; servic
   return (
     <>
       <FloatingActions settings={settings} onChat={() => setOpen(true)} chatOpen={open} />
+      <ReviewDock hidden={open} googleUrl={safeHttpUrl(settings.google) || `https://www.google.com/maps/search/${encodeURIComponent(`${settings.businessName} Darwin`)}`} />
       <ChatWidget settings={settings} services={services} open={open} onOpenChange={setOpen} />
     </>
   );

@@ -32,6 +32,7 @@ export function enquiryRows(db: Database): EnquiryRow[] {
       categories: categoriesFor(services, lead.services, `${lead.summary} ${lead.message}`),
       internalNotes: lead.internalNotes,
       promo: lead.promoCode ? `Promo ${lead.promoCode}: ${lead.promoMessage}` : "",
+      photos: lead.photos ?? [],
       job: jobFor(lead.reference),
     })),
     ...db.bookings.map((booking) => ({
@@ -54,6 +55,7 @@ export function enquiryRows(db: Database): EnquiryRow[] {
       categories: categoriesFor(services, booking.services, booking.summary),
       internalNotes: booking.internalNotes,
       promo: booking.promoCode ? `Promo ${booking.promoCode}: ${booking.promoMessage}` : "",
+      photos: [] as string[],
       job: jobFor(booking.reference),
     })),
   ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));

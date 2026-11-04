@@ -53,6 +53,7 @@ export const chatSchema = z.object({
   phone: auPhone,
   preferredTime: z.string().trim().max(40),
   promo: z.string().trim().max(40),
+  media: z.array(z.string().trim().url().max(500)).max(8).default([]),
   company_website: z.string(),
 });
 

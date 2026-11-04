@@ -4,6 +4,7 @@ import { Logo } from "@/components/brand";
 import { Sparkle } from "@/components/art/sparkle";
 import { SocialIcons } from "@/components/social";
 import { SERVICE_CATEGORIES } from "@/lib/constants";
+import { areaSlug } from "@/lib/areas";
 import type { Service, Settings } from "@/lib/types";
 import { byOrder, filled } from "@/lib/utils";
 
@@ -47,6 +48,7 @@ export function Footer({ settings, services }: { settings: Settings; services: S
                 ["/results", "Before & after"],
                 ["/offers", "Offers"],
                 ["/reviews", "Reviews"],
+                ["/areas", "Areas we clean"],
                 ["/faqs", "FAQs"],
                 ["/booking", "Book a clean"],
                 ["/privacy", "Privacy"],
@@ -56,6 +58,14 @@ export function Footer({ settings, services }: { settings: Settings; services: S
               ))}
             </ul>
           </div>
+        </div>
+        <div className="border-t border-white/10 py-6 text-sm">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky">Areas we clean</p>
+          <p className="mt-3 leading-7 text-white/60">
+            {settings.serviceAreas.map((area, index) => (
+              <span key={area}>{index > 0 && " · "}<Link className="hover:text-white" href={`/areas/${areaSlug(area)}`}>{area}</Link></span>
+            ))}
+          </p>
         </div>
         <div className="flex flex-col gap-2 border-t border-white/10 py-6 text-sm text-white/55 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} {settings.businessName}{filled(settings.abn) ? ` · ABN ${settings.abn}` : ""}</p>

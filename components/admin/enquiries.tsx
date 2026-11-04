@@ -35,6 +35,7 @@ export type EnquiryRow = {
   categories: ServiceCategory[];
   internalNotes: string;
   promo: string;
+  photos: string[];
   job: Pick<Job, "id" | "reference" | "status" | "customerId"> | null;
 };
 
@@ -279,6 +280,21 @@ function Details({ row }: { row: EnquiryRow }) {
         {row.message && row.message !== row.summary && <p className="whitespace-pre-wrap text-ink">“{row.message}”</p>}
         <p className="text-slate">{[row.address || row.suburb, row.email, row.date && `${formatDisplayDate(row.date)}${row.timeWindow ? `, ${timeWindowLabel(row.timeWindow)}` : ""}`].filter(Boolean).join(" · ")}</p>
         {row.promo && <p className="inline-flex rounded-full bg-leaf-soft px-3 py-1 font-semibold text-leaf-dark">{row.promo}</p>}
+        {row.photos.length > 0 && (
+          <div className="pt-2">
+            <p className="mb-2 font-semibold text-navy">Customer photos &amp; videos ({row.photos.length})</p>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {row.photos.map((url) => (
+                <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl bg-mist ring-1 ring-line">
+                  {/\.(mp4|mov|qt|webm|3gp|m4v)$/i.test(url)
+                    ? <video src={url} className="aspect-square w-full object-cover" muted playsInline preload="metadata" />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    : <img src={url} alt="Customer photo" className="aspect-square w-full object-cover" loading="lazy" />}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <div>
         <label className="text-sm font-semibold text-navy" htmlFor={`notes-${row.id}`}>Internal notes</label>

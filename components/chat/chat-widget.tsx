@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, MapPin, Phone, RotateCcw, Send, X } from "lucide-react";
-import { botReplyAction, checkPromoAction, submitChat } from "@/lib/actions";
+import { Camera, Check, MapPin, Phone, RotateCcw, Send, X } from "lucide-react";
+import { botReplyAction, chatUploadTicketsAction, checkPromoAction, submitChat } from "@/lib/actions";
 import { CHAT_OPTIONS, PREFERRED_TIMES, SERVICE_FIELDS, SERVICE_TITLES, fieldQuestion, summariseJob, validateDetails, type Field } from "@/lib/constants";
 import { ServiceIcon } from "@/components/icons";
 import { BrandIcon, whatsappHref } from "@/components/social";
@@ -23,6 +23,8 @@ type Draft = {
   time: string;
   promo: string;
   promoAsked: boolean;
+  media: string[];
+  mediaAsked: boolean;
   reference: string;
   promoMessage: string;
 };
@@ -30,10 +32,10 @@ type Draft = {
 type Ask =
   | { id: "services" }
   | { id: "field"; service: string; field: Field }
-  | { id: "suburb" | "name" | "phone" | "time" | "promo" | "confirm" | "done" };
+  | { id: "suburb" | "name" | "phone" | "time" | "media" | "promo" | "confirm" | "done" };
 
-const EMPTY: Draft = { services: [], servicesDone: false, details: {}, suburb: "", name: "", phone: "", time: "", promo: "", promoAsked: false, reference: "", promoMessage: "" };
-const STORAGE = "snt-chat-v2";
+const EMPTY: Draft = { services: [], servicesDone: false, details: {}, suburb: "", name: "", phone: "", time: "", promo: "", promoAsked: false, media: [], mediaAsked: false, reference: "", promoMessage: "" };
+const STORAGE = "snt-chat-v3";
 const GREETING = "Hi there! 👋 I’m the Territory Spotless booking assistant. I’ll ask a few quick questions and our team will call you back with a fixed price.";
 
 /** Works out the next question from what has been answered so far. */
@@ -48,6 +50,7 @@ function nextAsk(draft: Draft): Ask {
   if (!draft.name) return { id: "name" };
   if (!draft.phone) return { id: "phone" };
   if (!draft.time) return { id: "time" };
+  if (!draft.mediaAsked) return { id: "media" };
   if (!draft.promoAsked) return { id: "promo" };
   if (!draft.reference) return { id: "confirm" };
   return { id: "done" };
@@ -69,6 +72,8 @@ function askText(ask: Ask, draft: Draft) {
       return `Thanks ${draft.name.split(" ")[0]}! What’s the best mobile number to reach you on?`;
     case "time":
       return "When would you like the clean?";
+    case "media":
+      return "Got any photos or a short video of what needs cleaning? 📸 It helps us give you an accurate price straight away. (Optional)";
     case "promo":
       return "Do you have a promo code?";
     case "confirm":
@@ -84,6 +89,8 @@ export function ChatWidget({ settings, services, open, onOpenChange }: { setting
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
   const [ready, setReady] = useState(false);
   const [epoch, setEpoch] = useState(0);
   const scroller = useRef<HTMLDivElement>(null);
@@ -243,6 +250,34 @@ export function ChatWidget({ settings, services, open, onOpenChange }: { setting
     if (again && ask.id !== "done") window.setTimeout(() => push("bot", again), 300);
   }
 
+  async function upload(list: FileList | null) {
+    const files = Array.from(list || []).slice(0, 6 - draft.media.length);
+    if (!files.length) return;
+    setUploading(`Uploading ${files.length} file${files.length > 1 ? "s" : ""}…`);
+    const tickets = await chatUploadTicketsAction(files.map((file) => ({ name: file.name, type: file.type || guessType(file.name), size: file.size })));
+    if (!tickets.ok || !tickets.tickets) {
+      setUploading("");
+      push("bot", `${(!tickets.ok && tickets.error) || "That upload didn’t work."} You can try again, skip, or send them on WhatsApp after.`);
+      return;
+    }
+    const done: string[] = [];
+    for (const [index, file] of files.entries()) {
+      setUploading(`Uploading ${index + 1} of ${files.length}…`);
+      try {
+        const response = await fetch(tickets.tickets[index].uploadUrl, { method: "PUT", headers: { "content-type": file.type || guessType(file.name), "x-upsert": "false", "cache-control": "max-age=3600" }, body: file });
+        if (response.ok) done.push(tickets.tickets[index].publicUrl);
+      } catch {}
+    }
+    setUploading("");
+    if (!done.length) {
+      push("bot", "Sorry, those didn’t upload. Check your connection and try again, or tap Skip.");
+      return;
+    }
+    const videos = files.filter((file) => (file.type || guessType(file.name)).startsWith("video")).length;
+    push("user", `📎 ${done.length} file${done.length > 1 ? "s" : ""} attached${videos ? ` (incl. ${videos} video${videos > 1 ? "s" : ""})` : ""}`);
+    setDraft((current) => ({ ...current, media: [...current.media, ...done], mediaAsked: true }));
+  }
+
   async function send() {
     setBusy(true);
     const result = await submitChat({
@@ -253,6 +288,7 @@ export function ChatWidget({ settings, services, open, onOpenChange }: { setting
       phone: draft.phone,
       preferredTime: draft.time,
       promo: draft.promo,
+      media: draft.media,
       company_website: "",
     });
     setBusy(false);
@@ -268,7 +304,7 @@ export function ChatWidget({ settings, services, open, onOpenChange }: { setting
   if (!open) return null;
   const summary = summariseJob(draft.services, draft.details);
   const whatsappText = `Hi Territory Spotless, I'd like a free quote.\nReference: ${draft.reference}\n${summary.join("\n")}\nSuburb: ${draft.suburb}\nName: ${draft.name}`;
-  const answered = [draft.servicesDone, draft.suburb, draft.name, draft.phone, draft.time, draft.promoAsked, draft.reference].filter(Boolean).length;
+  const answered = [draft.servicesDone, draft.suburb, draft.name, draft.phone, draft.time, draft.mediaAsked, draft.promoAsked, draft.reference].filter(Boolean).length;
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col bg-mist md:inset-auto md:bottom-6 md:right-6 md:h-[min(720px,calc(100vh-3rem))] md:w-[420px] md:overflow-hidden md:rounded-[28px] md:shadow-soft md:ring-1 md:ring-line" role="dialog" aria-label="Territory Spotless booking assistant">
@@ -287,7 +323,7 @@ export function ChatWidget({ settings, services, open, onOpenChange }: { setting
           <button type="button" className="grid h-10 w-10 place-items-center rounded-full hover:bg-white/10" aria-label="Close chat" onClick={() => onOpenChange(false)}><X aria-hidden /></button>
         </div>
         <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/15" aria-hidden>
-          <div className="h-full rounded-full bg-leaf transition-all duration-500" style={{ width: `${(answered / 7) * 100}%` }} />
+          <div className="h-full rounded-full bg-leaf transition-all duration-500" style={{ width: `${(answered / 8) * 100}%` }} />
         </div>
       </header>
 
@@ -312,13 +348,14 @@ export function ChatWidget({ settings, services, open, onOpenChange }: { setting
             <Row label="Name" value={draft.name} />
             <Row label="Mobile" value={draft.phone} />
             <Row label="When" value={draft.time} />
+            {draft.media.length > 0 && <Row label="Photos" value={`${draft.media.length} attached`} />}
             {draft.promoMessage && <Row label="Promo" value={draft.promoMessage} />}
           </div>
         )}
 
         {draft.reference && (
           <div className="animate-rise space-y-2 rounded-2xl bg-white p-4 shadow-card">
-            <p className="text-sm text-slate">Want to add photos or speed things up?</p>
+            <p className="text-sm text-slate">{draft.media.length ? "Got more photos, or want to speed things up?" : "Want to add photos or speed things up?"}</p>
             <a className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-whatsapp font-bold text-white" href={whatsappHref(settings, whatsappText)} target="_blank" rel="noopener noreferrer"><BrandIcon name="whatsapp" className="h-5 w-5" /> Send photos on WhatsApp</a>
             <a className="flex min-h-12 items-center justify-center gap-2 rounded-full border-2 border-line font-bold text-navy" href={`tel:${settings.phoneTel}`}><Phone className="h-4 w-4" aria-hidden /> Call {settings.phoneDisplay}</a>
           </div>
@@ -353,6 +390,20 @@ export function ChatWidget({ settings, services, open, onOpenChange }: { setting
             </div>
           )}
           {ask.id === "time" && <div className="flex flex-wrap gap-2">{PREFERRED_TIMES.map((time) => <Chip key={time} onClick={() => answer(time, { time })}>{time}</Chip>)}</div>}
+          {ask.id === "media" && (
+            <div>
+              <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="sr-only" aria-label="Choose photos or videos" onChange={(event) => { upload(event.target.files); event.target.value = ""; }} />
+              {uploading ? (
+                <p className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand-light text-sm font-bold text-brand"><span className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" aria-hidden /> {uploading}</p>
+              ) : (
+                <div className="grid grid-cols-[1fr_auto] gap-2">
+                  <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand font-bold text-white"><Camera className="h-5 w-5" aria-hidden /> Add photos or video</button>
+                  <button type="button" onClick={() => answer("No photos", { mediaAsked: true })} className="min-h-12 rounded-full border-2 border-line px-5 font-bold text-navy">Skip</button>
+                </div>
+              )}
+              <p className="mt-2 text-center text-xs text-slate">Up to 6 files · photos or short videos (max 50 MB each)</p>
+            </div>
+          )}
           {ask.id === "promo" && <div className="flex flex-wrap gap-2"><Chip onClick={() => answer("No code", { promoAsked: true })}>No code</Chip></div>}
           {ask.id === "confirm" && (
             <div className="grid grid-cols-[1fr_auto] gap-2">
@@ -423,9 +474,40 @@ function FieldReplies({ field, onPick }: { field: Field; onPick: (value: Detail,
     );
   }
   if (field.kind === "choice") {
-    return <div className="flex flex-wrap gap-2">{field.options.map((option) => <Chip key={option} onClick={() => onPick(option, option)}>{option}</Chip>)}</div>;
+    return <div className="no-scrollbar flex max-h-44 flex-wrap gap-2 overflow-y-auto">{field.options.map((option) => <Chip key={option} onClick={() => onPick(option, option)}>{option}</Chip>)}</div>;
   }
+  if (field.kind === "multi") return <MultiReplies key={field.key} options={field.options} onDone={(picked) => onPick(picked.length ? picked.join(", ") : "None", picked.length ? picked.join(", ") : "None of these")} />;
   return null;
+}
+
+function MultiReplies({ options, onDone }: { options: string[]; onDone: (picked: string[]) => void }) {
+  const [picked, setPicked] = useState<string[]>([]);
+  return (
+    <div>
+      <div className="no-scrollbar flex max-h-40 flex-wrap gap-2 overflow-y-auto">
+        {options.map((option) => {
+          const on = picked.includes(option);
+          return (
+            <button key={option} type="button" aria-pressed={on} onClick={() => setPicked((current) => (on ? current.filter((item) => item !== option) : [...current, option]))} className={cn("inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold transition", on ? "border-brand bg-brand text-white" : "border-line bg-white text-navy hover:border-brand")}>
+              {on && <Check className="h-4 w-4" aria-hidden />} {option}
+            </button>
+          );
+        })}
+      </div>
+      <button type="button" onClick={() => onDone(picked)} className="mt-3 min-h-12 w-full rounded-full bg-leaf-dark font-bold text-white">{picked.length ? `Continue with ${picked.length} extra${picked.length > 1 ? "s" : ""}` : "None of these – continue"}</button>
+    </div>
+  );
+}
+
+function guessType(name: string) {
+  const ext = name.toLowerCase().split(".").pop() || "";
+  if (["mov", "qt"].includes(ext)) return "video/quicktime";
+  if (["mp4", "m4v"].includes(ext)) return "video/mp4";
+  if (ext === "webm") return "video/webm";
+  if (["heic", "heif"].includes(ext)) return `image/${ext}`;
+  if (ext === "png") return "image/png";
+  if (ext === "webp") return "image/webp";
+  return "image/jpeg";
 }
 
 function Row({ label, value }: { label: string; value: string }) {

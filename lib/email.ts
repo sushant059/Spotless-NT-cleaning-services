@@ -139,6 +139,20 @@ export async function sendMail(messages: Mail[]) {
 }
 
 /** An offer email: the message as paragraphs, with the business footer and an unsubscribe line. */
+/** Sent when the owner approves a website review: thanks, and a one-tap link to post the same words on Google. */
+export function reviewLiveEmail(settings: Settings, input: { name: string; text: string; rating: number; googleUrl: string }) {
+  const first = input.name.trim().split(/\s+/)[0] || "there";
+  const stars = "★".repeat(Math.max(1, Math.min(5, input.rating)));
+  const html = `<p style="margin:0 0 12px">Hi ${escapeHtml(first)},</p>
+  <p style="margin:0 0 12px">Thank you so much for your review. It's now live on our website!</p>
+  <div style="background:#F2F6FB;border-radius:12px;padding:14px 16px;margin:0 0 16px"><div style="color:#F5A623;font-size:18px">${stars}</div><p style="margin:6px 0 0;font-style:italic">“${escapeHtml(input.text)}”</p></div>
+  <p style="margin:0 0 16px">Could you spare 30 seconds to post the same words on Google? It's the biggest help a small Darwin business can get.</p>
+  <p style="margin:0 0 8px"><a href="${input.googleUrl}" style="display:inline-block;background:#2F9E4F;color:#ffffff;text-decoration:none;font-weight:700;padding:13px 22px;border-radius:999px">Post my review on Google</a></p>
+  <p style="margin:12px 0 0;font-size:13px;color:#566476">Tip: copy your review above, tap the button, choose the stars and paste.</p>`;
+  const text = `Hi ${first},\n\nThank you for your review. It's now live on our website!\n\n"${input.text}"\n\nCould you post the same words on Google? It really helps a small Darwin business:\n${input.googleUrl}\n\n${settings.businessName} · ${settings.phoneDisplay}`;
+  return { subject: "Your review is live – thank you! ⭐", html: shell(settings, html), text };
+}
+
 export function offerEmail(settings: Settings, input: { subject: string; message: string }) {
   const paragraphs = input.message.split(/\n{2,}|\n/).filter((line) => line.trim()).map((line) => `<p style="margin:0 0 12px">${escapeHtml(line).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>')}</p>`).join("");
   const footer = `<p style="margin-top:20px;font-size:13px;color:#4A5D75">${escapeHtml(settings.businessName)} · ${escapeHtml(settings.phoneDisplay)} · ${escapeHtml(settings.email)}<br>Don't want offers from us? Reply with “unsubscribe” and we'll take you off the list.</p>`;

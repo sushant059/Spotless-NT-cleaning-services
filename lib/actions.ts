@@ -8,18 +8,18 @@ import { addAdmin, listAdmins, removeAdmin, setAdminPassword, verifyAdmin } from
 import { clearSession, devAdminPassword, getSession, setSession } from "@/lib/auth";
 import { getBotReply } from "@/lib/bot";
 import { SERVICE_CATEGORY_IDS, summariseJob, timeWindowLabel, validateDetails } from "@/lib/constants";
-import { customerEmail, invoiceEmail, offerEmail, ownerLeadEmail, quoteEmail, quoteResponseEmail, sendMail, sendMailEach } from "@/lib/email";
+import { customerEmail, invoiceEmail, offerEmail, ownerLeadEmail, quoteEmail, quoteResponseEmail, reviewLiveEmail, sendMail, sendMailEach } from "@/lib/email";
 import { invoiceTotals, money, nextInvoiceNumber, nextQuoteNumber } from "@/lib/invoice";
 import { quoteMessage } from "@/lib/quote";
 import { sendSms } from "@/lib/sms";
 import { rateLimit } from "@/lib/rate-limit";
 import { seedDatabase } from "@/lib/seed";
-import { getDb, storeMediaFile, supabaseAnon, updateDb, usingSupabase } from "@/lib/store";
+import { getDb, storeMediaFile, supabaseAdmin, supabaseAnon, updateDb, usingSupabase } from "@/lib/store";
 import type { ActionResult, Booking, Customer, Database, DetailValue, Faq, Invoice, InvoiceStatus, Job, Lead, Offer, Promo, Quote, QuoteStatus, ResultPair, Review, Service, Settings } from "@/lib/types";
 import { cancelRequestFor, linkEnquiry, matchCustomer } from "@/lib/crm";
 import { dayAvailability, isSlotFull, slotOccupants } from "@/lib/schedule";
 import { bookingSheetRow, customerSheetChanges, jobSheetRow, leadSheetRow, sheetsEnabled, syncEverything, syncSheet } from "@/lib/sheets";
-import { byOrder, darwinISODate, escapeHtml, formatDisplayDate, siteUrl, slugify, uid, uniqueReference } from "@/lib/utils";
+import { byOrder, darwinISODate, escapeHtml, formatDisplayDate, safeHttpUrl, siteUrl, slugify, uid, uniqueReference } from "@/lib/utils";
 import {
   bookingSchema,
   chatSchema,
@@ -347,6 +347,34 @@ export async function submitContact(formData: FormData): Promise<ActionResult> {
   return { ok: true, reference, emailed };
 }
 
+const CHAT_MEDIA = /^(image\/(jpeg|png|webp|gif|heic|heif)|video\/(mp4|quicktime|webm|3gpp))$/;
+const chatMediaPrefix = () => `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/chat/`;
+
+/**
+ * Photos and videos from the chat go straight from the customer's phone to storage
+ * (videos are too big to pass through the server), using one-time signed upload links.
+ */
+export async function chatUploadTicketsAction(files: { name: string; type: string; size: number }[]): Promise<ActionResult & { tickets?: { uploadUrl: string; publicUrl: string }[] }> {
+  const block = limited(await clientKey("chat-media"), 20, 10 * 60 * 1000);
+  if (block) return block;
+  const sb = supabaseAdmin();
+  if (!sb) return { ok: false, error: "Uploads aren't available right now." };
+  const list = (Array.isArray(files) ? files : []).slice(0, 6);
+  const tickets: { uploadUrl: string; publicUrl: string }[] = [];
+  for (const file of list) {
+    const type = String(file?.type || "").toLowerCase();
+    const size = Number(file?.size || 0);
+    if (!CHAT_MEDIA.test(type)) return { ok: false, error: `${file?.name || "That file"} isn't a photo or video we can take.` };
+    if (size > 50_000_000) return { ok: false, error: `${file.name} is over 50 MB. Try a shorter video.` };
+    const safe = String(file.name || "file").toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/^-+|-+$/g, "").slice(-60) || "file";
+    const key = `chat/${darwinISODate()}/${randomBytes(6).toString("hex")}-${safe}`;
+    const { data, error } = await sb.storage.from("media").createSignedUploadUrl(key);
+    if (error || !data) return { ok: false, error: "Couldn't start the upload. Please try again." };
+    tickets.push({ uploadUrl: data.signedUrl, publicUrl: sb.storage.from("media").getPublicUrl(key).data.publicUrl });
+  }
+  return { ok: true, tickets };
+}
+
 export async function submitChat(input: unknown): Promise<ActionResult> {
   const block = limited(await clientKey("chat"), 5, 10 * 60 * 1000);
   if (block) return block;
@@ -384,7 +412,7 @@ export async function submitChat(input: unknown): Promise<ActionResult> {
       internalNotes: "",
       promoCode: promo.code,
       promoMessage,
-      photos: [],
+      photos: parsed.data.media.filter((url) => url.startsWith(chatMediaPrefix())),
       message: "",
       preferredTime: parsed.data.preferredTime,
       createdAt: new Date().toISOString(),
@@ -400,7 +428,7 @@ export async function submitChat(input: unknown): Promise<ActionResult> {
     suburb: parsed.data.suburb,
     summary: summariseJob(services, parsed.data.details).join("\n"),
     message: promoMessage,
-    extra: parsed.data.preferredTime ? `Preferred time: ${parsed.data.preferredTime}` : "",
+    extra: [parsed.data.preferredTime ? `Preferred time: ${parsed.data.preferredTime}` : "", ...parsed.data.media.filter((url) => url.startsWith(chatMediaPrefix())).map((url, index) => `Photo/video ${index + 1}: ${url}`)].filter(Boolean).join("\n"),
   });
   await syncLeadSheet(saved, reference);
   await syncCustomerSheets(saved, [linked.customerId], [linked.jobId]);
@@ -737,12 +765,24 @@ export async function moderateReviewAction(id: string, status: Review["status"])
   const auth = await guard();
   if (!auth.ok) return auth;
   if (!["pending", "approved", "rejected"].includes(status)) return { ok: false, error: "Unknown status." };
-  await updateDb((db) => {
+  let approved: Review | null = null;
+  const saved = await updateDb((db) => {
     const review = db.reviews.find((item) => item.id === id);
-    if (review) review.status = status;
+    if (!review) return;
+    // Only a fresh approval of a customer's own review triggers the "post it on Google" email.
+    if (status === "approved" && review.status !== "approved" && review.source === "customer" && review.email) approved = { ...review };
+    review.status = status;
   });
+  let emailed = false;
+  const fresh = approved as Review | null;
+  if (fresh) {
+    const googleUrl = safeHttpUrl(saved.settings.google) || `https://www.google.com/maps/search/${encodeURIComponent(`${saved.settings.businessName} Darwin`)}`;
+    const mail = reviewLiveEmail(saved.settings, { name: fresh.name, text: fresh.text, rating: fresh.rating, googleUrl });
+    const sent = await sendMail([{ to: fresh.email, subject: mail.subject, html: mail.html, text: mail.text }]);
+    emailed = sent;
+  }
   refresh();
-  return { ok: true, message: status === "approved" ? "Review approved. It is now on the website." : status === "rejected" ? "Review rejected. It stays hidden." : "Moved back to pending." };
+  return { ok: true, message: status === "approved" ? `Review approved. It is now on the website.${fresh ? (emailed ? " We've emailed the customer a link to post it on Google too." : "") : ""}` : status === "rejected" ? "Review rejected. It stays hidden." : "Moved back to pending." };
 }
 
 export async function submitReviewAction(input: unknown): Promise<ActionResult> {
