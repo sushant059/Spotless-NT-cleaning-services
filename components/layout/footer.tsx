@@ -26,7 +26,7 @@ export function Footer({ settings, services }: { settings: Settings; services: S
               {SERVICE_CATEGORIES.filter((_, i) => i % 2 === index).map((group) => (
                 <div key={group.id} className="mt-4">
                   <Link href={`/services#${group.id}`} className="font-semibold text-white hover:text-sky">{group.title}</Link>
-                  <ul className="mt-2 space-y-1.5 text-sm text-white/65">
+                  <ul className="mt-2 space-y-1.5 text-[15px] text-white/75">
                     {visible.filter((service) => service.category === group.id).map((service) => (
                       <li key={service.id}><Link className="hover:text-white" href={`/services/${service.slug}`}>{service.title}</Link></li>
                     ))}
@@ -42,7 +42,7 @@ export function Footer({ settings, services }: { settings: Settings; services: S
               <li><a className="flex items-center gap-3 break-all hover:text-sky" href={`mailto:${settings.email}`}><Mail className="h-4 w-4 shrink-0 text-leaf" aria-hidden />{settings.email}</a></li>
               <li className="flex items-center gap-3 text-white/80"><MapPin className="h-4 w-4 text-leaf" aria-hidden />{filled(settings.address) ? settings.address : "Darwin & surrounds, NT"}</li>
             </ul>
-            <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm text-white/65">
+            <ul className="mt-6 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[15px] text-white/75">
               {[
                 ["/how-it-works", "How it works"],
                 ["/results", "Before & after"],

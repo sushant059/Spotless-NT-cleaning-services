@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarCheck, CheckCircle2, MessageSquareText, Phone, ShieldCheck, Star, ThumbsUp } from "lucide-react";
+import { ArrowRight, CalendarCheck, CheckCircle2, MapPin, MessageSquareText, PenLine, Phone, ShieldCheck, Star, ThumbsUp } from "lucide-react";
 import { CtaBand, FaqList, GoogleReviewButton, ReviewCard, SectionHeading, ServiceCard, Steps, TeamVisual } from "@/components/content";
 import { FadeIn } from "@/components/fade-in";
 import { SuburbChecker } from "@/components/home/interactive";
@@ -8,6 +8,7 @@ import { OfferCard } from "@/components/offers";
 import { whatsappHref } from "@/components/social";
 import { serviceStock, STOCK, STOCK_CLIPS } from "@/lib/stock";
 import { getDb } from "@/lib/store";
+import { areaSlug, mainAreas } from "@/lib/areas";
 import { byOrder, filled } from "@/lib/utils";
 import { isOfferLive } from "@/lib/validators";
 
@@ -99,8 +100,8 @@ export default async function HomePage() {
                   <Link href={`/services/${service.slug}`} className="card press flex items-center gap-3 p-2.5 pr-4">
                     <span className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[14px] bg-mist"><Photo src={service.image} stock={serviceStock(service.slug)} fill sizes="72px" /></span>
                     <span className="min-w-0 flex-1">
-                      <span className="block font-bold leading-snug text-navy">{service.title}</span>
-                      <span className="mt-0.5 block line-clamp-1 text-sm text-slate">{service.summary}</span>
+                      <span className="block text-[17px] font-bold leading-snug text-navy">{service.title}</span>
+                      <span className="mt-0.5 block line-clamp-2 text-[14px] leading-snug text-slate">{service.summary}</span>
                     </span>
                     <ArrowRight className="h-5 w-5 shrink-0 text-brand" aria-hidden />
                   </Link>
@@ -201,17 +202,23 @@ export default async function HomePage() {
       {/* Reviews */}
       <section className="section">
         <div className="container-x">
-          <SectionHeading
-            eyebrow="Reviews"
-            title={reviews.length ? "What Top End customers say" : "Had a clean with us?"}
-            lede={reviews.length ? undefined : "We’re a new local business and every review helps. Tell other Darwin families how we went."}
-            action={
-              <div className="flex flex-wrap gap-3">
-                <Link href="/reviews#write" className="inline-flex min-h-12 items-center rounded-full bg-navy px-5 font-semibold text-white hover:bg-navy-deep">Leave a review</Link>
-                <GoogleReviewButton settings={s} />
+          <FadeIn from="zoom">
+            <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#FFF8E6] via-white to-brand-light p-6 ring-1 ring-[#F5E3B3] sm:p-10 md:p-12">
+              <div className="grid gap-8 md:grid-cols-[1.3fr_1fr] md:items-center">
+                <div>
+                  <p className="eyebrow"><span className="h-0.5 w-5 rounded-full bg-current" aria-hidden /> Reviews</p>
+                  <h2 className="h-section mt-3">{reviews.length ? "What Top End customers say" : "Had a clean with us?"}</h2>
+                  <p className="lede">We’re a local business and every review helps other Darwin families find us. It takes about a minute.</p>
+                  <div className="mt-5 flex items-center gap-1 text-[#F5A623]" aria-hidden>{[0, 1, 2, 3, 4].map((i) => <Star key={i} className="h-7 w-7 fill-current" />)}</div>
+                </div>
+                <div className="grid gap-3">
+                  <Link href="/reviews#write" className="press inline-flex min-h-14 items-center justify-center gap-2.5 rounded-full bg-navy px-6 text-lg font-bold text-white shadow-card transition hover:bg-navy-deep"><PenLine className="h-5 w-5" aria-hidden /> Leave a review</Link>
+                  <GoogleReviewButton settings={s} className="min-h-14 border-0 text-lg font-bold shadow-card ring-1 ring-line" />
+                  <p className="text-center text-sm text-slate">Website reviews are checked by our team before they go live.</p>
+                </div>
               </div>
-            }
-          />
+            </div>
+          </FadeIn>
           {reviews.length > 0 && (
             <div className="mt-10 grid gap-5 md:grid-cols-3">
               {reviews.map((review, index) => <FadeIn key={review.id} from="zoom" delay={index * 100}><ReviewCard review={review} /></FadeIn>)}
@@ -225,10 +232,16 @@ export default async function HomePage() {
         <div className="container-x grid gap-10 lg:grid-cols-2 lg:items-center">
           <div>
             <SectionHeading eyebrow="Service area" title="Darwin, Palmerston & the rural area." lede="From the CBD to Humpty Doo. If you’re just outside, ask. We’ll give you a straight yes or no." />
-            <div className="mt-6 flex flex-wrap gap-2">
-              {s.serviceAreas.slice(0, 12).map((area) => <span key={area} className="chip border border-line bg-white text-navy">{area}</span>)}
-              {s.serviceAreas.length > 12 && <span className="chip bg-brand-light text-brand">+{s.serviceAreas.length - 12} more</span>}
-            </div>
+            <ul className="mt-7 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              {mainAreas(s.serviceAreas).map((area) => (
+                <li key={area.name}>
+                  <Link href={`/areas/${areaSlug(area.name)}`} className="group flex min-h-12 items-center gap-2 rounded-2xl bg-white px-3.5 font-semibold text-navy shadow-card ring-1 ring-line transition hover:-translate-y-0.5 hover:ring-brand/40">
+                    <MapPin className="h-4 w-4 shrink-0 text-leaf-dark transition group-hover:scale-110" aria-hidden /> <span className="leading-tight">{area.name}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <Link href="/areas" className="link-arrow mt-6">See all {s.serviceAreas.length} suburbs we clean <ArrowRight className="h-4 w-4" aria-hidden /></Link>
           </div>
           <FadeIn from="right"><SuburbChecker areas={s.serviceAreas} /></FadeIn>
         </div>

@@ -53,13 +53,13 @@ p {
     @apply py-16 md:py-24;
   }
   .eyebrow {
-    @apply inline-flex items-center gap-2 text-[13px] font-semibold text-leaf-dark;
+    @apply inline-flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.14em] text-leaf-dark md:text-sm;
   }
   .h-section {
-    @apply font-display text-[30px] font-extrabold leading-[1.1] text-navy md:text-[44px];
+    @apply font-display text-[32px] font-extrabold leading-[1.08] tracking-tight text-navy text-balance md:text-[46px];
   }
   .lede {
-    @apply mt-4 max-w-2xl text-lg text-slate;
+    @apply mt-4 max-w-2xl text-[17px] leading-relaxed text-slate md:text-lg;
   }
   .card {
     @apply rounded-card border border-line bg-white shadow-card;

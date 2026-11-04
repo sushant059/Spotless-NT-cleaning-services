@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowUp, MessageSquareText, Phone } from "lucide-react";
+import { ArrowUp, MessageSquareText, Phone, Star } from "lucide-react";
 import { BrandIcon, whatsappHref } from "@/components/social";
 import type { Settings } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -45,7 +45,7 @@ export function FloatingActions({ settings, onChat, chatOpen }: { settings: Sett
           </div>
         )}
       </div>
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Quick contact">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Quick contact">
         <a href={`tel:${settings.phoneTel}`} className="flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-semibold text-navy">
           <Phone className="h-5 w-5 text-brand" aria-hidden /> Call
         </a>
@@ -54,6 +54,9 @@ export function FloatingActions({ settings, onChat, chatOpen }: { settings: Sett
         </a>
         <button type="button" onClick={onChat} className="flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-semibold text-navy">
           <MessageSquareText className="h-5 w-5 text-brand" aria-hidden /> Chat
+        </button>
+        <button type="button" onClick={() => window.dispatchEvent(new Event("open-review"))} className="flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-semibold text-navy">
+          <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-[#FFC93C] to-[#F5A623]"><Star className="h-3.5 w-3.5 fill-white text-white" aria-hidden /></span> Review
         </button>
         <Link href="/free-quote" className="flex min-h-16 flex-col items-center justify-center gap-1 bg-leaf-dark text-xs font-bold text-white">
           Free quote
