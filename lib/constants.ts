@@ -75,9 +75,12 @@ export const SERVICE_FIELDS: Record<string, Field[]> = {
     { kind: "toggle", key: "stairs", label: "Include the stairs", ask: "Any carpeted stairs to include?" },
   ],
   "couch-and-sofa-cleaning": [
-    { kind: "stepper", key: "seats", label: "Seats", ask: "How many seats is the lounge (all pieces together)?", min: 1, max: 20, defaultValue: 3 },
+    { kind: "stepper", key: "couches", label: "Couches", ask: "How many couches or lounges need cleaning?", min: 1, max: 10, defaultValue: 1 },
+    { kind: "multi", key: "couchTypes", label: "Type", ask: "What kind are they? Tap all that apply.", options: ["2-seater", "3-seater", "L-shape / modular", "Recliner", "Sofa bed", "Armchair", "Ottoman"] },
+    { kind: "stepper", key: "seats", label: "Seats in total", ask: "How many seats altogether (count every seat across all couches)?", min: 1, max: 30, defaultValue: 3 },
     { kind: "choice", key: "couchFabric", label: "Material", ask: "What is it covered in?", options: ["Fabric", "Leather", "Suede / microfibre", "Not sure"] },
-    { kind: "choice", key: "couchCondition", label: "Couch condition", ask: "How is the couch looking?", options: CONDITION },
+    { kind: "choice", key: "couchCondition", label: "Couch condition", ask: "How are they looking?", options: CONDITION },
+    { kind: "multi", key: "couchExtras", label: "Couch add-ons", ask: "Any add-ons for the couches? Tap all that apply.", options: ["Fabric protection", "Pet hair & odour treatment", "Cushion covers washed", "Scotchgard after clean"] },
   ],
   "mattress-cleaning": [
     { kind: "stepper", key: "single", label: "Single mattresses", ask: "How many single mattresses?", min: 0, max: 8, defaultValue: 0 },

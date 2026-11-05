@@ -25,6 +25,7 @@ type Draft = {
   promoAsked: boolean;
   media: string[];
   mediaAsked: boolean;
+  moreAsked: boolean;
   reference: string;
   promoMessage: string;
 };
@@ -32,10 +33,10 @@ type Draft = {
 type Ask =
   | { id: "services" }
   | { id: "field"; service: string; field: Field }
-  | { id: "suburb" | "name" | "phone" | "time" | "media" | "promo" | "confirm" | "done" };
+  | { id: "more" | "suburb" | "name" | "phone" | "time" | "media" | "promo" | "confirm" | "done" };
 
-const EMPTY: Draft = { services: [], servicesDone: false, details: {}, suburb: "", name: "", phone: "", time: "", promo: "", promoAsked: false, media: [], mediaAsked: false, reference: "", promoMessage: "" };
-const STORAGE = "snt-chat-v3";
+const EMPTY: Draft = { services: [], servicesDone: false, details: {}, suburb: "", name: "", phone: "", time: "", promo: "", promoAsked: false, media: [], mediaAsked: false, moreAsked: false, reference: "", promoMessage: "" };
+const STORAGE = "snt-chat-v4";
 const GREETING = "Hi there! 👋 I’m the Territory Spotless booking assistant. I’ll ask a few quick questions and our team will call you back with a fixed price.";
 
 /** Works out the next question from what has been answered so far. */
@@ -46,6 +47,7 @@ function nextAsk(draft: Draft): Ask {
       if (draft.details[field.key] === undefined) return { id: "field", service, field };
     }
   }
+  if (!draft.moreAsked) return { id: "more" };
   if (!draft.suburb) return { id: "suburb" };
   if (!draft.name) return { id: "name" };
   if (!draft.phone) return { id: "phone" };
@@ -64,6 +66,8 @@ function askText(ask: Ask, draft: Draft) {
       const first = (SERVICE_FIELDS[ask.service] ?? [])[0]?.key === ask.field.key && draft.services.length > 1;
       return `${first ? `Now for ${SERVICE_TITLES[ask.service]?.toLowerCase()}. ` : ""}${fieldQuestion(ask.field)}`;
     }
+    case "more":
+      return `Got it! Is there any other work you’d like to add while we’re there? ✨`;
     case "suburb":
       return "Great. Which suburb is the property in?";
     case "name":
@@ -382,6 +386,16 @@ export function ChatWidget({ settings, services, open, onOpenChange }: { setting
               </button>
             </div>
           )}
+          {ask.id === "more" && (
+            <div>
+              <div className="no-scrollbar flex max-h-40 flex-wrap gap-2 overflow-y-auto">
+                {options.filter((option) => !draft.services.includes(option.slug) && option.slug !== "something-else").map((option) => (
+                  <Chip key={option.slug} onClick={() => answer(`Add ${option.label.toLowerCase()}`, { services: [...draft.services, option.slug] })}><ServiceIcon name={option.icon} className="h-4 w-4" /> + {option.label}</Chip>
+                ))}
+              </div>
+              <button type="button" onClick={() => answer("No, that’s everything", { moreAsked: true })} className="mt-3 min-h-12 w-full rounded-full bg-leaf-dark font-bold text-white">No, that’s everything</button>
+            </div>
+          )}
           {ask.id === "field" && <FieldReplies field={ask.field} onPick={(value, label) => setDetail(ask.field.key, value, label)} />}
           {ask.id === "suburb" && (
             <div className="flex flex-wrap gap-2">
@@ -494,7 +508,7 @@ function MultiReplies({ options, onDone }: { options: string[]; onDone: (picked:
           );
         })}
       </div>
-      <button type="button" onClick={() => onDone(picked)} className="mt-3 min-h-12 w-full rounded-full bg-leaf-dark font-bold text-white">{picked.length ? `Continue with ${picked.length} extra${picked.length > 1 ? "s" : ""}` : "None of these – continue"}</button>
+      <button type="button" onClick={() => onDone(picked)} className="mt-3 min-h-12 w-full rounded-full bg-leaf-dark font-bold text-white">{picked.length ? `Continue (${picked.length} selected)` : "None of these – continue"}</button>
     </div>
   );
 }

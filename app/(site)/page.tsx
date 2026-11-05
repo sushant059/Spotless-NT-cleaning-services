@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { ArrowRight, CalendarCheck, CheckCircle2, MapPin, MessageSquareText, PenLine, Phone, ShieldCheck, Star, ThumbsUp } from "lucide-react";
-import { CtaBand, FaqList, GoogleReviewButton, ReviewCard, SectionHeading, ServiceCard, Steps, TeamVisual } from "@/components/content";
+import { CtaBand, FaqList, GoogleReviewButton, SectionHeading, ServiceCard, Steps, TeamVisual } from "@/components/content";
 import { FadeIn } from "@/components/fade-in";
 import { SuburbChecker } from "@/components/home/interactive";
 import { BackgroundVideo, Photo } from "@/components/photo";
 import { OfferCard } from "@/components/offers";
+import { ReviewMarquee } from "@/components/review-marquee";
 import { whatsappHref } from "@/components/social";
 import { serviceStock, STOCK, STOCK_CLIPS } from "@/lib/stock";
 import { getDb } from "@/lib/store";
@@ -19,7 +20,8 @@ export default async function HomePage() {
   const s = db.settings;
   const offers = byOrder(db.offers).filter((offer) => isOfferLive(offer));
   const services = byOrder(db.services).filter((service) => service.visible);
-  const reviews = byOrder(db.reviews).filter((review) => review.status === "approved").slice(0, 3);
+  const reviews = byOrder(db.reviews).filter((review) => review.status === "approved" && review.source !== "sample");
+  const rating = reviews.length ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0;
   const faqs = byOrder(db.faqs).slice(0, 5);
   const bond = services.find((service) => service.slug === BOND_SLUG);
   // Admin can set the hero to their own photo, or to a video file, which then plays instead of the stock clip.
@@ -200,31 +202,37 @@ export default async function HomePage() {
       )}
 
       {/* Reviews */}
-      <section className="section">
+      <section className="section overflow-hidden bg-gradient-to-b from-white via-[#FFFBF0] to-white">
         <div className="container-x">
-          <FadeIn from="zoom">
-            <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#FFF8E6] via-white to-brand-light p-6 ring-1 ring-[#F5E3B3] sm:p-10 md:p-12">
-              <div className="grid gap-8 md:grid-cols-[1.3fr_1fr] md:items-center">
-                <div>
-                  <p className="eyebrow"><span className="h-0.5 w-5 rounded-full bg-current" aria-hidden /> Reviews</p>
-                  <h2 className="h-section mt-3">{reviews.length ? "What Top End customers say" : "Had a clean with us?"}</h2>
-                  <p className="lede">We’re a local business and every review helps other Darwin families find us. It takes about a minute.</p>
-                  <div className="mt-5 flex items-center gap-1 text-[#F5A623]" aria-hidden>{[0, 1, 2, 3, 4].map((i) => <Star key={i} className="h-7 w-7 fill-current" />)}</div>
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="eyebrow"><span className="h-0.5 w-5 rounded-full bg-current" aria-hidden /> Reviews</p>
+              <h2 className="h-section mt-3">{reviews.length ? "Loved by Top End homes." : "Had a clean with us?"}</h2>
+              {reviews.length > 0 ? (
+                <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <span className="font-display text-5xl font-extrabold leading-none text-navy">{rating.toFixed(1)}</span>
+                  <span>
+                    <span className="flex text-[#F5A623]" aria-label={`Rated ${rating.toFixed(1)} out of 5`}>{[0, 1, 2, 3, 4].map((i) => <Star key={i} className="h-6 w-6 fill-current" aria-hidden />)}</span>
+                    <span className="mt-1 block text-sm font-medium text-slate">from {reviews.length} verified customer review{reviews.length === 1 ? "" : "s"} · <Link href="/reviews" className="font-semibold text-brand hover:underline">read them all</Link></span>
+                  </span>
                 </div>
-                <div className="grid gap-3">
-                  <Link href="/reviews#write" className="press inline-flex min-h-14 items-center justify-center gap-2.5 rounded-full bg-navy px-6 text-lg font-bold text-white shadow-card transition hover:bg-navy-deep"><PenLine className="h-5 w-5" aria-hidden /> Leave a review</Link>
-                  <GoogleReviewButton settings={s} className="min-h-14 border-0 text-lg font-bold shadow-card ring-1 ring-line" />
-                  <p className="text-center text-sm text-slate">Website reviews are checked by our team before they go live.</p>
-                </div>
-              </div>
+              ) : (
+                <p className="lede">We’re a local business and every review helps other Darwin families find us. It takes about a minute.</p>
+              )}
             </div>
-          </FadeIn>
-          {reviews.length > 0 && (
-            <div className="mt-10 grid gap-5 md:grid-cols-3">
-              {reviews.map((review, index) => <FadeIn key={review.id} from="zoom" delay={index * 100}><ReviewCard review={review} /></FadeIn>)}
+            <div className="grid gap-3 sm:grid-cols-2 lg:w-[440px]">
+              <Link href="/reviews#write" className="press inline-flex min-h-14 items-center justify-center gap-2.5 rounded-full bg-navy px-6 text-[17px] font-bold text-white shadow-card transition hover:bg-navy-deep"><PenLine className="h-5 w-5" aria-hidden /> Leave a review</Link>
+              <GoogleReviewButton settings={s} label="Google review" className="min-h-14 border-0 text-[17px] font-bold shadow-card ring-1 ring-line" />
             </div>
-          )}
+          </div>
         </div>
+        {reviews.length > 0 && (
+          <div className="mt-8 space-y-1 sm:mt-10">
+            <ReviewMarquee reviews={reviews} />
+            {reviews.length >= 8 && <ReviewMarquee reviews={[...reviews].reverse()} reverse />}
+            <p className="pt-2 text-center text-sm text-slate">Hover or tap a review to pause it.</p>
+          </div>
+        )}
       </section>
 
       {/* Areas */}
