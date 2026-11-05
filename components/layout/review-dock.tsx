@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 export function ReviewDock({ googleUrl, hidden }: { googleUrl: string; hidden?: boolean }) {
   const [open, setOpen] = useState(false);
   const [nudge, setNudge] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -24,6 +25,9 @@ export function ReviewDock({ googleUrl, hidden }: { googleUrl: string; hidden?: 
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") setOpen(false);
     }
+    const onScroll = () => setScrolled(window.scrollY > 450);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
     const onOpen = () => setOpen(true);
     window.addEventListener("open-review", onOpen);
     document.addEventListener("mousedown", onDown);
@@ -32,6 +36,7 @@ export function ReviewDock({ googleUrl, hidden }: { googleUrl: string; hidden?: 
       window.clearTimeout(timer);
       window.clearTimeout(stop);
       window.removeEventListener("open-review", onOpen);
+      window.removeEventListener("scroll", onScroll);
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
@@ -57,7 +62,7 @@ export function ReviewDock({ googleUrl, hidden }: { googleUrl: string; hidden?: 
         aria-expanded={open}
         aria-label={open ? "Close review options" : "Leave a review"}
         onClick={() => { setOpen((value) => !value); setNudge(false); }}
-        className={cn("press group hidden h-14 items-center gap-2 rounded-full bg-white py-2 pl-2 pr-5 font-bold text-navy shadow-soft ring-1 ring-line transition hover:ring-sun md:flex", nudge && !open && "animate-pop")}
+        className={cn("press group hidden h-14 items-center gap-2 rounded-full bg-white py-2 pl-2 pr-5 font-bold text-navy shadow-soft ring-1 ring-line transition hover:ring-sun", scrolled || open ? "md:flex" : "md:hidden", nudge && !open && scrolled && "animate-pop")}
       >
         <span className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-[#FFC93C] to-[#F5A623] text-white shadow-[0_4px_14px_rgba(245,166,35,.45)]">
           {open ? <X className="h-5 w-5" aria-hidden /> : <Star className="h-5 w-5 fill-white" aria-hidden />}

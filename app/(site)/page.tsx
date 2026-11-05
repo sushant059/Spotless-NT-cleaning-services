@@ -6,6 +6,7 @@ import { SuburbChecker } from "@/components/home/interactive";
 import { BackgroundVideo, Photo } from "@/components/photo";
 import { OfferCard } from "@/components/offers";
 import { ReviewMarquee } from "@/components/review-marquee";
+import { ReviewTicker } from "@/components/review-ticker";
 import { whatsappHref } from "@/components/social";
 import { serviceStock, STOCK, STOCK_CLIPS } from "@/lib/stock";
 import { getDb } from "@/lib/store";
@@ -37,13 +38,27 @@ export default async function HomePage() {
           <BackgroundVideo clip={STOCK_CLIPS[1]} src={s.heroImage} className="-z-20" />
         )}
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-navy-deep/95 via-navy-deep/75 to-navy-deep/30" aria-hidden />
-        <div className="container-x grid items-center gap-10 py-14 sm:py-20 lg:min-h-[640px] lg:grid-cols-[1.2fr_1fr] lg:gap-16 lg:py-24">
-          <div className="animate-rise">
+        <div className="container-x grid items-center gap-10 py-12 sm:py-16 lg:min-h-[620px] lg:grid-cols-[1.2fr_1fr] lg:gap-16 lg:py-16">
+          <div className="min-w-0 animate-rise">
             <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1.5 text-sm font-medium text-white/90 ring-1 ring-white/15 backdrop-blur">
               <span className="h-2 w-2 rounded-full bg-leaf" /> Darwin & Palmerston · locally owned
             </p>
-            <h1 className="mt-6 text-[40px] font-extrabold leading-[1.05] tracking-tight sm:text-6xl lg:text-[68px]">{s.heroHeadline}</h1>
+            <h1 className="mt-6 text-[40px] font-extrabold leading-[1.05] tracking-tight sm:text-6xl lg:text-[62px]">{s.heroHeadline}</h1>
             <p className="mt-5 max-w-xl text-lg text-white/80 md:text-xl">{s.heroSubtext}</p>
+            {/* Reviews, right at the top: live quotes gliding past, plus one-tap review buttons */}
+            <div className="mt-6 min-w-0 max-w-xl rounded-[24px] bg-white/10 p-3 ring-1 ring-white/15 backdrop-blur">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-1.5">
+                <span className="flex items-center gap-2 text-sm font-semibold text-white">
+                  <span className="flex text-[#FFC93C]" aria-hidden>{[0, 1, 2, 3, 4].map((i) => <Star key={i} className="h-4 w-4 fill-current" />)}</span>
+                  {reviews.length ? <><b className="text-base">{rating.toFixed(1)}</b> <span className="text-white/75">from local customers</span></> : "Happy with your clean?"}
+                </span>
+                <span className="flex gap-2">
+                  <Link href="/reviews#write" className="press inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full bg-[#FFC93C] px-3.5 text-[13px] font-bold text-navy transition hover:bg-[#FFD866]"><Star className="h-3.5 w-3.5 fill-navy" aria-hidden /> Leave a review</Link>
+                  <GoogleReviewButton settings={s} label="Google" className="min-h-10 border-0 px-3.5 text-[13px] font-bold" />
+                </span>
+              </div>
+              {reviews.length > 0 && <div className="mt-3"><ReviewTicker reviews={reviews.map(({ id, name, text, rating: stars, suburb }) => ({ id, name, text, rating: stars, suburb }))} /></div>}
+            </div>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href="/free-quote" className="press inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-leaf px-7 text-lg font-bold text-white transition hover:bg-leaf-dark">Get a free quote <ArrowRight className="h-5 w-5" aria-hidden /></Link>
               <button type="button" data-open-chat className="press inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-white px-7 text-lg font-bold text-navy transition hover:bg-brand-light"><MessageSquareText className="h-5 w-5" aria-hidden /> Book in chat</button>
@@ -52,17 +67,6 @@ export default async function HomePage() {
               <span className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-leaf" aria-hidden /> Fixed price upfront</span>
               <span className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-leaf" aria-hidden /> Kid & pet safe</span>
               <a href={`tel:${s.phoneTel}`} className="flex items-center gap-2 hover:text-white"><Phone className="h-5 w-5 text-leaf" aria-hidden /> {s.phoneDisplay}</a>
-            </div>
-            {/* Reviews: right at the top, so happy customers can leave one in a tap */}
-            <div className="mt-8 flex flex-col gap-3 rounded-[26px] bg-white/10 p-3 ring-1 ring-white/15 backdrop-blur sm:inline-flex sm:flex-row sm:items-center sm:rounded-full sm:p-2 sm:pl-5">
-              <span className="flex items-center gap-2 px-1 text-sm font-semibold text-white/90 sm:px-0">
-                <span className="flex text-[#FFC93C]" aria-hidden>{[0, 1, 2, 3, 4].map((i) => <Star key={i} className="h-4 w-4 fill-current" />)}</span>
-                Happy with your clean?
-              </span>
-              <span className="grid grid-cols-2 gap-2 sm:flex">
-                <Link href="/reviews#write" className="press inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#FFC93C] px-4 text-sm font-bold text-navy transition hover:bg-[#FFD866]"><Star className="h-4 w-4 fill-navy" aria-hidden /> Leave a review</Link>
-                <GoogleReviewButton settings={s} label="Google review" className="min-h-11 border-0 px-4 text-sm font-bold" />
-              </span>
             </div>
           </div>
 
