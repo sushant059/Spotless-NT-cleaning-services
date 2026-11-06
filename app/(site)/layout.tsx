@@ -24,6 +24,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
     email: db.settings.email,
     url: siteUrl(),
     image: `${siteUrl()}/territory-spotless-mark.png`,
+    logo: `${siteUrl()}/territory-spotless-app-icon.png`,
     areaServed: [{ "@type": "City", name: "Darwin" }, { "@type": "City", name: "Palmerston" }, { "@type": "AdministrativeArea", name: "Litchfield" }],
     priceRange: "$$",
     makesOffer: services.map((service) => ({ "@type": "Offer", itemOffered: { "@type": "Service", name: service.title, url: `${siteUrl()}/services/${service.slug}` } })),

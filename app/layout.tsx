@@ -34,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
       images: [{ url: image, alt: db.settings.businessName }],
     },
     twitter: { card: "summary_large_image", title: db.settings.seoTitle, description: db.settings.seoDescription, images: [image] },
-    icons: { icon: "/territory-spotless-mark.svg", apple: "/territory-spotless-app-icon.png" },
+    icons: { icon: [{ url: "/favicon.ico", sizes: "48x48" }, { url: "/icon-192.png", type: "image/png", sizes: "192x192" }, { url: "/territory-spotless-mark.svg", type: "image/svg+xml" }], shortcut: "/favicon.ico", apple: "/territory-spotless-app-icon.png" },
   };
 }
 
