@@ -4,13 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { availabilityAction, checkPromoAction, submitBooking } from "@/lib/actions";
-import { SERVICE_FIELDS, SERVICE_TITLES, TIME_WINDOWS, defaultDetails, summariseJob, timeWindowLabel, validateDetails } from "@/lib/constants";
+import { TIME_WINDOWS, defaultDetails, summariseJob, timeWindowLabel, validateDetails } from "@/lib/constants";
 import { bookingSchema, type BookingInput } from "@/lib/validators";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label, Textarea } from "@/components/ui/fields";
 import type { BlockedDate, Service, Settings } from "@/lib/types";
 import { cn, darwinISODate, waLink } from "@/lib/utils";
-import { Minus, Plus } from "lucide-react";
+import { ServiceDetails } from "@/components/forms/service-details";
 
 const STEPS = ["Services", "Details", "Date", "Address", "Contact", "Review"];
 
@@ -161,31 +161,7 @@ export function BookingForm({ services, areas, blocked, settings, initialService
           })}
         </div>
       )}
-      {step === 1 && (
-        <div className="space-y-5">
-          {values.services.map((slug) => (
-            <fieldset key={slug} className="rounded-2xl border border-line p-4">
-              <legend className="px-1 font-bold">{SERVICE_TITLES[slug] || slug}</legend>
-              <div className="space-y-3">
-                {(SERVICE_FIELDS[slug] ?? []).map((field) => {
-                  const value = values.details[field.key];
-                  if (field.kind === "stepper") {
-                    const current = Number(value ?? field.defaultValue);
-                    return <div key={field.key} className="flex items-center justify-between"><span>{field.label}</span><span className="flex items-center gap-2"><button type="button" className="grid h-10 w-10 place-items-center rounded-full bg-brand-light" aria-label={`Fewer ${field.label}`} onClick={() => setDetail(field.key, Math.max(field.min, current - 1))}><Minus className="h-4 w-4" /></button><strong>{current}</strong><button type="button" className="grid h-10 w-10 place-items-center rounded-full bg-brand-light" aria-label={`More ${field.label}`} onClick={() => setDetail(field.key, Math.min(field.max, current + 1))}><Plus className="h-4 w-4" /></button></span></div>;
-                  }
-                  if (field.kind === "toggle") return <label key={field.key} className="flex gap-2"><input type="checkbox" checked={Boolean(value)} onChange={(event) => setDetail(field.key, event.target.checked)} />{field.label}</label>;
-                  if (field.kind === "choice") return <div key={field.key}><p className="mb-2 font-semibold">{field.label}</p><div className="flex flex-wrap gap-2">{field.options.map((option) => <button type="button" key={option} aria-pressed={value === option} className={cn("rounded-full px-3 py-2 text-sm font-semibold", value === option ? "bg-brand text-white" : "bg-brand-light")} onClick={() => setDetail(field.key, option)}>{option}</button>)}</div></div>;
-                  if (field.kind === "multi") {
-                    const list = String(value || "").split(", ").filter((item) => item && item !== "None");
-                    return <div key={field.key}><p className="mb-2 font-semibold">{field.label} <span className="font-normal text-slate">(tap all that apply)</span></p><div className="flex flex-wrap gap-2">{field.options.map((option) => { const on = list.includes(option); return <button type="button" key={option} aria-pressed={on} className={cn("rounded-full px-3 py-2 text-sm font-semibold", on ? "bg-brand text-white" : "bg-brand-light")} onClick={() => setDetail(field.key, (on ? list.filter((item) => item !== option) : [...list, option]).join(", "))}>{option}</button>; })}</div></div>;
-                  }
-                  return <div key={field.key}><Label>{field.label}</Label><Textarea value={String(value ?? "")} placeholder={field.placeholder} onChange={(event) => setDetail(field.key, event.target.value)} /></div>;
-                })}
-              </div>
-            </fieldset>
-          ))}
-        </div>
-      )}
+      {step === 1 && <ServiceDetails services={values.services} details={values.details} onChange={setDetail} />}
       {step === 2 && (
         <div className="grid gap-4">
           <div>

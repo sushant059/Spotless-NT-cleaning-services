@@ -22,8 +22,8 @@ const optionalUrl = z
   .refine((value) => value === "" || /^https?:\/\/.+/i.test(value), "Enter a full http or https link, or leave it blank.");
 
 export const quoteSchema = z.object({
-  service: z.string().trim().min(1, "Choose a service"),
-  size: z.string().trim().min(2, "Tell us roughly how big the job is").max(160),
+  services: z.array(z.string().trim().max(80)).min(1, "Choose at least one service").max(12),
+  details: z.record(z.union([z.string(), z.number(), z.boolean()])),
   suburb: z.string().trim().min(2, "Enter your suburb").max(80),
   name: z.string().trim().min(2, "Enter your name").max(80),
   phone: auPhone,

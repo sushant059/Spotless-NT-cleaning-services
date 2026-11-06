@@ -25,29 +25,29 @@ type Draft = {
   promoAsked: boolean;
   media: string[];
   mediaAsked: boolean;
-  moreAsked: boolean;
   reference: string;
   promoMessage: string;
 };
 
 type Ask =
   | { id: "services" }
+  | { id: "addMore" }
   | { id: "field"; service: string; field: Field }
-  | { id: "more" | "suburb" | "name" | "phone" | "time" | "media" | "promo" | "confirm" | "done" };
+  | { id: "suburb" | "name" | "phone" | "time" | "media" | "promo" | "confirm" | "done" };
 
-const EMPTY: Draft = { services: [], servicesDone: false, details: {}, suburb: "", name: "", phone: "", time: "", promo: "", promoAsked: false, media: [], mediaAsked: false, moreAsked: false, reference: "", promoMessage: "" };
-const STORAGE = "snt-chat-v4";
+const EMPTY: Draft = { services: [], servicesDone: false, details: {}, suburb: "", name: "", phone: "", time: "", promo: "", promoAsked: false, media: [], mediaAsked: false, reference: "", promoMessage: "" };
+const STORAGE = "snt-chat-v5";
 const GREETING = "Hi there! 👋 I’m the Territory Spotless booking assistant. I’ll ask a few quick questions and our team will call you back with a fixed price.";
 
 /** Works out the next question from what has been answered so far. */
 function nextAsk(draft: Draft): Ask {
-  if (!draft.servicesDone) return { id: "services" };
+  if (!draft.services.length) return { id: "services" };
+  if (!draft.servicesDone) return { id: "addMore" };
   for (const service of draft.services) {
     for (const field of SERVICE_FIELDS[service] ?? []) {
       if (draft.details[field.key] === undefined) return { id: "field", service, field };
     }
   }
-  if (!draft.moreAsked) return { id: "more" };
   if (!draft.suburb) return { id: "suburb" };
   if (!draft.name) return { id: "name" };
   if (!draft.phone) return { id: "phone" };
@@ -61,13 +61,13 @@ function nextAsk(draft: Draft): Ask {
 function askText(ask: Ask, draft: Draft) {
   switch (ask.id) {
     case "services":
-      return draft.services.length ? "Anything else to add? Tap more, or press Continue." : "What would you like cleaned? You can pick more than one.";
+      return "What would you like cleaned? Pick one to start, and you can add more next.";
+    case "addMore":
+      return `Added ✅ Your list so far:\n${draft.services.map((slug) => `• ${SERVICE_TITLES[slug] ?? slug}`).join("\n")}\n\nWould you like to add another service, or is that everything?`;
     case "field": {
       const first = (SERVICE_FIELDS[ask.service] ?? [])[0]?.key === ask.field.key && draft.services.length > 1;
       return `${first ? `Now for ${SERVICE_TITLES[ask.service]?.toLowerCase()}. ` : ""}${fieldQuestion(ask.field)}`;
     }
-    case "more":
-      return `Got it! Is there any other work you’d like to add while we’re there? ✨`;
     case "suburb":
       return "Great. Which suburb is the property in?";
     case "name":
@@ -180,6 +180,19 @@ export function ChatWidget({ settings, services, open, onOpenChange }: { setting
       const details = { ...current.details, [key]: value };
       const next = { ...current, details };
       // Once every question for a service is answered, check the answers make sense.
+      // Check the carpet sizes add up as soon as the last size is answered.
+      if (key === "carpetLarge") {
+        const rooms = Number(details.rooms || 0);
+        const sized = ["carpetSmall", "carpetMedium", "carpetLarge"].reduce((sum, item) => sum + Number(details[item] || 0), 0);
+        if (rooms && sized !== rooms) {
+          window.setTimeout(() => push("bot", `Those sizes add up to ${sized}, but you said ${rooms} room${rooms === 1 ? "" : "s"}. Let’s go through the sizes again.`), 100);
+          const reset = { ...details };
+          delete reset.carpetSmall;
+          delete reset.carpetMedium;
+          delete reset.carpetLarge;
+          return { ...next, details: reset };
+        }
+      }
       const service = current.services.find((slug) => (SERVICE_FIELDS[slug] ?? []).some((field) => field.key === key));
       if (service) {
         const fields = SERVICE_FIELDS[service] ?? [];
@@ -188,7 +201,8 @@ export function ChatWidget({ settings, services, open, onOpenChange }: { setting
           if (problem) {
             window.setTimeout(() => push("bot", `${problem} Let’s try that again.`), 100);
             const reset = { ...details };
-            fields.forEach((field) => delete reset[field.key]);
+            const sizeKeys = ["carpetSmall", "carpetMedium", "carpetLarge"];
+            (service === "carpet-cleaning" && problem.includes("room sizes") ? fields.filter((field) => sizeKeys.includes(field.key)) : fields).forEach((field) => delete reset[field.key]);
             return { ...next, details: reset };
           }
         }
@@ -369,31 +383,20 @@ export function ChatWidget({ settings, services, open, onOpenChange }: { setting
       {/* Quick replies */}
       {!typing && (
         <div className="border-t border-line bg-white px-4 pt-3">
-          {ask.id === "services" && (
+          {(ask.id === "services" || ask.id === "addMore") && (
             <div>
-              <div className="no-scrollbar flex max-h-40 flex-wrap gap-2 overflow-y-auto">
-                {options.map((option) => {
-                  const selected = draft.services.includes(option.slug);
-                  return (
-                    <button key={option.slug} type="button" aria-pressed={selected} onClick={() => setDraft((current) => ({ ...current, services: selected ? current.services.filter((slug) => slug !== option.slug) : [...current.services, option.slug] }))} className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-semibold transition", selected ? "border-brand bg-brand text-white" : "border-line bg-white text-navy hover:border-brand")}>
-                      {selected ? <Check className="h-4 w-4" aria-hidden /> : <ServiceIcon name={option.icon} className="h-4 w-4" />} {option.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <button type="button" disabled={!draft.services.length} onClick={() => answer(draft.services.map((slug) => SERVICE_TITLES[slug]).join(", "), { servicesDone: true })} className="mt-3 min-h-12 w-full rounded-full bg-leaf-dark font-bold text-white transition disabled:opacity-40">
-                {draft.services.length ? `Continue with ${draft.services.length} service${draft.services.length > 1 ? "s" : ""}` : "Choose a service"}
-              </button>
-            </div>
-          )}
-          {ask.id === "more" && (
-            <div>
-              <div className="no-scrollbar flex max-h-40 flex-wrap gap-2 overflow-y-auto">
-                {options.filter((option) => !draft.services.includes(option.slug) && option.slug !== "something-else").map((option) => (
-                  <Chip key={option.slug} onClick={() => answer(`Add ${option.label.toLowerCase()}`, { services: [...draft.services, option.slug] })}><ServiceIcon name={option.icon} className="h-4 w-4" /> + {option.label}</Chip>
+              <div className="no-scrollbar flex max-h-44 flex-wrap gap-2 overflow-y-auto">
+                {options.filter((option) => !draft.services.includes(option.slug)).map((option) => (
+                  <button key={option.slug} type="button" onClick={() => answer(`${ask.id === "addMore" ? "+ " : ""}${SERVICE_TITLES[option.slug] ?? option.label}`, { services: [...draft.services, option.slug] })} className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-line bg-white px-3.5 text-sm font-semibold text-navy transition hover:border-brand hover:bg-brand-light">
+                    <ServiceIcon name={option.icon} className="h-4 w-4" /> {option.label}
+                  </button>
                 ))}
               </div>
-              <button type="button" onClick={() => answer("No, that’s everything", { moreAsked: true })} className="mt-3 min-h-12 w-full rounded-full bg-leaf-dark font-bold text-white">No, that’s everything</button>
+              {ask.id === "addMore" && (
+                <button type="button" onClick={() => answer(draft.services.length > 1 ? "That’s everything" : "Just this one", { servicesDone: true })} className="mt-3 min-h-12 w-full rounded-full bg-leaf-dark font-bold text-white">
+                  {draft.services.length > 1 ? `That’s everything (${draft.services.length} services)` : "No, just this one"}
+                </button>
+              )}
             </div>
           )}
           {ask.id === "field" && <FieldReplies field={ask.field} onPick={(value, label) => setDetail(ask.field.key, value, label)} />}

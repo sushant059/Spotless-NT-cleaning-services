@@ -62,14 +62,10 @@ const CONDITION = ["Fresh – just a refresh", "Lived-in – light marks", "Well
 
 export const SERVICE_FIELDS: Record<string, Field[]> = {
   "carpet-cleaning": [
-    { kind: "stepper", key: "rooms", label: "Rooms", ask: "How many rooms of carpet need cleaning?", min: 1, max: 20, defaultValue: 1 },
-    {
-      kind: "choice",
-      key: "carpetSize",
-      label: "Room size",
-      ask: "Roughly how big are the rooms?",
-      options: ["Compact – bedroom size (up to 12 m²)", "Standard – lounge size (12–20 m²)", "Large – open-plan (20–35 m²)", "Extra large – 35 m² + or commercial"],
-    },
+    { kind: "stepper", key: "rooms", label: "Rooms", ask: "How many rooms or areas of carpet need cleaning?", min: 1, max: 20, defaultValue: 1 },
+    { kind: "stepper", key: "carpetSmall", label: "Small rooms (up to 12 m², e.g. bedroom)", ask: "How many are SMALL? (up to 12 m², about 3 × 4 m, like a bedroom)", min: 0, max: 20, defaultValue: 0 },
+    { kind: "stepper", key: "carpetMedium", label: "Medium rooms (12–20 m², e.g. lounge)", ask: "How many are MEDIUM? (12–20 m², about 4 × 5 m, like a lounge)", min: 0, max: 20, defaultValue: 0 },
+    { kind: "stepper", key: "carpetLarge", label: "Large rooms (over 20 m², e.g. open-plan)", ask: "And how many are LARGE? (over 20 m², like an open-plan living area)", min: 0, max: 20, defaultValue: 0 },
     { kind: "choice", key: "carpetCondition", label: "Carpet condition", ask: "How is the carpet looking right now?", options: CONDITION },
     { kind: "toggle", key: "hallway", label: "Include the hallway", ask: "Should we include the hallway?" },
     { kind: "toggle", key: "stairs", label: "Include the stairs", ask: "Any carpeted stairs to include?" },
@@ -107,7 +103,8 @@ export const SERVICE_FIELDS: Record<string, Field[]> = {
     { kind: "text", key: "what", label: "What happened?", ask: "Oh no! What happened? A quick description helps us bring the right gear.", placeholder: "For example: a drink spilled on the lounge carpet" },
   ],
   "end-of-lease-and-bond-cleaning": [
-    { kind: "choice", key: "property", label: "Property type", ask: "Is it a house, unit or townhouse?", options: ["House", "Unit", "Townhouse"] },
+    { kind: "stepper", key: "properties", label: "Properties", ask: "How many properties need a bond clean?", min: 1, max: 10, defaultValue: 1 },
+    { kind: "choice", key: "property", label: "Property type", ask: "What type of property is it? (If there's more than one, tell us about the main one.)", options: ["House", "Unit / apartment", "Townhouse"] },
     { kind: "choice", key: "storeys", label: "Levels", ask: "Single level or two storey?", options: ["Single level", "Two storey"] },
     { kind: "stepper", key: "bedrooms", label: "Bedrooms", ask: "How many bedrooms does the property have?", min: 0, max: 10, defaultValue: 2 },
     { kind: "stepper", key: "bathrooms", label: "Bathrooms", ask: "How many bathrooms?", min: 0, max: 8, defaultValue: 1 },
@@ -196,6 +193,11 @@ export function summariseJob(slugs: string[], details: Record<string, string | n
 
 export function validateDetails(slugs: string[], details: Record<string, string | number | boolean>) {
   for (const slug of slugs) {
+    if (slug === "carpet-cleaning") {
+      const rooms = Number(details.rooms || 0);
+      const sized = ["carpetSmall", "carpetMedium", "carpetLarge"].reduce((sum, key) => sum + Number(details[key] || 0), 0);
+      if (rooms && sized !== rooms) return `The room sizes add up to ${sized}, but you said ${rooms} room${rooms === 1 ? "" : "s"}. Let's check the sizes again.`;
+    }
     if (slug === "mattress-cleaning") {
       const total = ["single", "double", "queen", "king"].reduce((sum, key) => sum + Number(details[key] || 0), 0);
       if (total < 1) return "Add at least one mattress.";

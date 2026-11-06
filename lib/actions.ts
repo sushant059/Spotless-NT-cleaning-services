@@ -222,9 +222,16 @@ export async function botReplyAction(text: string) {
 export async function submitQuote(formData: FormData): Promise<ActionResult> {
   const block = limited(await clientKey("quote"), 5, 10 * 60 * 1000);
   if (block) return block;
+  const json = (key: string, fallback: unknown) => {
+    try {
+      return JSON.parse(String(formData.get(key) || ""));
+    } catch {
+      return fallback;
+    }
+  };
   const raw = {
-    service: String(formData.get("service") || ""),
-    size: String(formData.get("size") || ""),
+    services: json("services", []),
+    details: json("details", {}),
     suburb: String(formData.get("suburb") || ""),
     name: String(formData.get("name") || ""),
     phone: String(formData.get("phone") || ""),
@@ -237,8 +244,12 @@ export async function submitQuote(formData: FormData): Promise<ActionResult> {
   if (!parsed.success) return { ok: false, error: "Please check the form.", fields: fieldsOf(parsed.error) };
   if (honeypot(parsed.data.company_website)) return { ok: true, reference: "SNT-000000", emailed: false };
   const db = await getDb();
-  const service = db.services.find((item) => item.slug === parsed.data.service && item.visible);
-  if (!service && parsed.data.service !== "not-sure") return { ok: false, error: "Choose a service.", fields: { service: "Choose a service." } };
+  const allowed = new Set([...db.services.filter((item) => item.visible).map((item) => item.slug), "something-else"]);
+  const services = parsed.data.services.filter((slug) => allowed.has(slug));
+  if (!services.length) return { ok: false, error: "Choose at least one service.", fields: { services: "Choose at least one service." } };
+  const detailError = validateDetails(services, parsed.data.details);
+  if (detailError) return { ok: false, error: detailError };
+  const jobSummary = summariseJob(services, parsed.data.details).join("\n");
   const photos = await savePhotos(formData.getAll("photos").filter((item): item is File => item instanceof File));
   const phone = normalizeAuPhone(parsed.data.phone) || parsed.data.phone;
   let reference = "";
@@ -250,7 +261,6 @@ export async function submitQuote(formData: FormData): Promise<ActionResult> {
     reference = uniqueReference([...next.leads.map((lead) => lead.reference), ...next.bookings.map((booking) => booking.reference)]);
     const promo = applyPromo(next, parsed.data.promo);
     promoMessage = promo.message;
-    const summary = service ? service.title : "Not sure yet";
     const lead: Lead = {
       id: uid("lead"),
       reference,
@@ -260,9 +270,9 @@ export async function submitQuote(formData: FormData): Promise<ActionResult> {
       phone,
       email: parsed.data.email,
       suburb: parsed.data.suburb,
-      services: service ? [service.slug] : [],
-      details: { size: parsed.data.size },
-      summary: `${summary} — ${parsed.data.size}`,
+      services,
+      details: parsed.data.details,
+      summary: jobSummary,
       notes: parsed.data.notes,
       internalNotes: "",
       promoCode: promo.code,
@@ -282,7 +292,7 @@ export async function submitQuote(formData: FormData): Promise<ActionResult> {
     phone,
     email: parsed.data.email,
     suburb: parsed.data.suburb,
-    summary: `${service?.title ?? "Not sure"} — ${parsed.data.size}`,
+    summary: jobSummary,
     message: [parsed.data.notes, promoMessage].filter(Boolean).join("\n"),
     extra: photos.length ? `${photos.length} photo${photos.length === 1 ? "" : "s"} attached in admin.` : "",
   }, { email: parsed.data.email, name: parsed.data.name, kind: "quote request", reference });

@@ -5,10 +5,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { submitQuote, checkPromoAction } from "@/lib/actions";
 import { quoteSchema, type QuoteInput } from "@/lib/validators";
+import { ServiceDetails } from "@/components/forms/service-details";
+import { ServiceIcon } from "@/components/icons";
+import { defaultDetails, validateDetails } from "@/lib/constants";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FieldError, Input, Label, Textarea } from "@/components/ui/fields";
 import type { Service, Settings } from "@/lib/types";
-import { waLink } from "@/lib/utils";
+import { cn, waLink } from "@/lib/utils";
 
 async function compressImage(file: File) {
   if (!file.type.startsWith("image/")) return file;
@@ -32,12 +36,22 @@ export function QuoteForm({ services, areas, settings, initialService = "" }: { 
   const [result, setResult] = useState<{ reference: string; name: string } | null>(null);
   const form = useForm<QuoteInput>({
     resolver: zodResolver(quoteSchema),
-    defaultValues: { service: initialService, size: "", suburb: "", name: "", phone: "", email: "", notes: "", promo: "", company_website: "" },
+    defaultValues: { services: initialService && initialService !== "not-sure" ? [initialService] : [], details: initialService ? defaultDetails([initialService]) : {}, suburb: "", name: "", phone: "", email: "", notes: "", promo: "", company_website: "" },
   });
 
+  const chosen = form.watch("services");
+  const details = form.watch("details");
+  function toggle(slug: string) {
+    const next = chosen.includes(slug) ? chosen.filter((item) => item !== slug) : [...chosen, slug];
+    form.setValue("services", next, { shouldValidate: form.formState.isSubmitted });
+    form.setValue("details", { ...defaultDetails(next), ...form.getValues("details") });
+  }
+
   async function onSubmit(values: QuoteInput) {
+    const problem = validateDetails(values.services, values.details);
+    if (problem) return form.setError("root", { message: problem });
     const data = new FormData();
-    Object.entries(values).forEach(([key, value]) => data.set(key, String(value ?? "")));
+    Object.entries(values).forEach(([key, value]) => data.set(key, typeof value === "object" ? JSON.stringify(value) : String(value ?? "")));
     photos.forEach((photo) => data.append("photos", photo));
     const response = await submitQuote(data);
     if (!response.ok) {
@@ -74,19 +88,28 @@ export function QuoteForm({ services, areas, settings, initialService = "" }: { 
         <input id="company_website" tabIndex={-1} autoComplete="off" {...form.register("company_website")} />
       </div>
       <div>
-        <Label htmlFor="service">Service</Label>
-        <select id="service" className="min-h-12 w-full rounded-input border border-line bg-white px-4" {...form.register("service")}>
-          <option value="">Choose a service</option>
-          {services.filter((service) => service.visible).map((service) => <option key={service.id} value={service.slug}>{service.title}</option>)}
-          <option value="not-sure">Not sure yet</option>
-        </select>
-        <FieldError message={form.formState.errors.service?.message} />
+        <p className="text-[15px] font-bold text-navy">1. What would you like cleaned?</p>
+        <p className="text-sm text-slate">Choose one or more. We’ll ask a few questions for each.</p>
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {services.filter((service) => service.visible).map((service) => {
+            const on = chosen.includes(service.slug);
+            return (
+              <button key={service.id} type="button" aria-pressed={on} onClick={() => toggle(service.slug)} className={cn("flex min-h-14 items-center gap-3 rounded-2xl border px-3.5 text-left font-semibold transition", on ? "border-brand bg-brand-light text-navy ring-2 ring-brand/20" : "border-line bg-white text-navy hover:border-brand")}>
+                <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-xl", on ? "bg-brand text-white" : "bg-mist text-brand")}>{on ? <Check className="h-5 w-5" aria-hidden /> : <ServiceIcon name={service.icon} className="h-5 w-5" />}</span>
+                <span className="leading-tight">{service.title}</span>
+              </button>
+            );
+          })}
+        </div>
+        <FieldError message={form.formState.errors.services?.message} />
       </div>
-      <div>
-        <Label htmlFor="size">Rough size</Label>
-        <Input id="size" placeholder="e.g. 3 bedrooms, or a 5-seat sofa" {...form.register("size")} />
-        <FieldError message={form.formState.errors.size?.message} />
-      </div>
+      {chosen.length > 0 && (
+        <div>
+          <p className="text-[15px] font-bold text-navy">2. Tell us about the job</p>
+          <div className="mt-3"><ServiceDetails services={chosen} details={details} onChange={(key, value) => form.setValue("details", { ...form.getValues("details"), [key]: value })} /></div>
+        </div>
+      )}
+      <p className="pt-2 text-[15px] font-bold text-navy">{chosen.length ? "3." : "2."} Your details</p>
       <div>
         <Label htmlFor="suburb">Suburb</Label>
         <Input id="suburb" list="suburbs" {...form.register("suburb")} />
